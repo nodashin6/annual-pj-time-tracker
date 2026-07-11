@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# 保護ブランチ（main）への直接 push を弾く。
+# 変更は必ず feature ブランチ → Pull Request 経由でマージすること。
+#
+# 緊急でどうしても直接 push したい場合のみ:
+#   PROTECTED_BYPASS=1 git push ...
+#
+set -euo pipefail
+
+protected_branch="main"
+
+if [[ "${PROTECTED_BYPASS:-}" == "1" ]]; then
+  echo "pre-push: PROTECTED_BYPASS=1 のため保護チェックをスキップします" >&2
+  exit 0
+fi
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == "refs/heads/${protected_branch}" ]]; then
+    echo "" >&2
+    echo "✖ ${protected_branch} への直接 push はブロックされています。" >&2
+    echo "  git flow に従い、feature ブランチを切って Pull Request 経由でマージしてください。" >&2
+    echo "" >&2
+    echo "  例:" >&2
+    echo "    git switch -c feature/my-change" >&2
+    echo "    git push -u origin feature/my-change" >&2
+    echo "    gh pr create --base ${protected_branch}" >&2
+    echo "" >&2
+    echo "  （どうしても必要な場合のみ: PROTECTED_BYPASS=1 git push ...）" >&2
+    exit 1
+  fi
+done
+
+exit 0
