@@ -1,0 +1,17 @@
+name: 🐛 バグ報告
+description: 不具合を報告する
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: detail
+    attributes:
+      label: 内容
+      description: 現象・再現手順・期待する挙動
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 環境
+      placeholder: ブラウザ / OS など
