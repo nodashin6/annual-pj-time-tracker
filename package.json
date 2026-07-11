@@ -1,0 +1,28 @@
+{
+  "name": "annual-pj-time-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "年間のプロジェクト稼働（工数・稼働率・キャパ）を月次/年次で集計・可視化するアプリ",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.110.2",
+    "next": "15.5.20",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "recharts": "2.15.0",
+    "zustand": "5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.2",
+    "@types/node": "22.10.7",
+    "@types/react": "19.0.7",
+    "@types/react-dom": "19.0.3",
+    "tailwindcss": "4.3.2",
+    "typescript": "5.7.3"
+  }
+}
