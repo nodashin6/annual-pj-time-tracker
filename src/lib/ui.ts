@@ -10,7 +10,28 @@ export const BTN_GHOST =
 export const DEL = "rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50";
 export const LABEL = "mb-1 block text-xs font-medium text-slate-500";
 
-/** 消化率の色: 予定超過は赤、健全域は緑、余裕は青。 */
+/**
+ * プロジェクトのグラフ表示色パレット。
+ * 自動採番（store.addProject）と新規作成フォームの初期色で共有する単一の真実の源。
+ */
+export const PALETTE: readonly string[] = [
+  "#6366f1",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+];
+
+/**
+ * 消化率（実績/予定, %）の色。
+ * - 100% 超: 赤（超過）
+ * - 80〜100%: 緑（健全）
+ * - 50〜79%: 黄（やや余裕）
+ * - 50% 未満: 青（余裕）
+ */
 export function consumptionColor(pct: number): string {
   if (pct > 100) return "#ef4444";
   if (pct >= 80) return "#10b981";

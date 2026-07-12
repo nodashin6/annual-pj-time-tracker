@@ -71,6 +71,23 @@ create table if not exists public.projects (
 create index if not exists projects_order_idx on public.projects (order_id);
 create index if not exists projects_team_idx on public.projects (team_id);
 
+-- ========== 既存環境向けカラム追加（後方互換マイグレーション） ==========
+-- `create table if not exists` は既存テーブルへ列を追加しないため、
+-- 旧スキーマが存在する環境でも新カラムが揃うよう明示的に補う。
+alter table public.orders
+  add column if not exists client_id uuid references public.clients(id) on delete set null,
+  add column if not exists fiscal_year integer,
+  add column if not exists owner_worker_id uuid references public.workers(id) on delete set null,
+  add column if not exists initial_hours numeric(10, 1) not null default 0,
+  add column if not exists planned_hours numeric(10, 1) not null default 0,
+  add column if not exists budget_amount numeric(14, 2);
+
+alter table public.projects
+  add column if not exists team_id uuid references public.teams(id) on delete set null,
+  add column if not exists color text not null default '#6366f1',
+  add column if not exists initial_hours numeric(10, 1) not null default 0,
+  add column if not exists planned_hours numeric(10, 1) not null default 0;
+
 -- マイルストーン（プロジェクトの区間）。日付で区間を指定する（メンバー非依存）。
 create table if not exists public.milestones (
   id uuid primary key default gen_random_uuid(),

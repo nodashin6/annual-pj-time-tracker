@@ -36,17 +36,7 @@ import {
   entryInputSchema,
 } from "./schemas";
 import type { z } from "zod";
-
-const PALETTE = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#0ea5e9",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-];
+import { PALETTE } from "./ui";
 
 const num = (v: number | string | null | undefined): number =>
   v == null ? 0 : Number(v);

@@ -4,18 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
-import { CARD, INPUT, BTN, BTN_GHOST, LABEL } from "@/lib/ui";
-
-const PALETTE = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#0ea5e9",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-];
+import { CARD, INPUT, BTN, BTN_GHOST, LABEL, PALETTE } from "@/lib/ui";
 
 function NewProjectForm() {
   const router = useRouter();

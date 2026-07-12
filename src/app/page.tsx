@@ -10,14 +10,7 @@ import {
 } from "@/lib/aggregate";
 import { StatCard } from "@/components/StatCard";
 import { MonthlyStackedBar, ProjectPie } from "@/components/Charts";
-
-/** 消化率の色: 予定超過は赤、健全域は緑、余裕は青。 */
-function consumptionColor(pct: number): string {
-  if (pct > 100) return "#ef4444";
-  if (pct >= 80) return "#10b981";
-  if (pct >= 50) return "#f59e0b";
-  return "#0ea5e9";
-}
+import { consumptionColor } from "@/lib/ui";
 
 export default function DashboardPage() {
   const { workers, clients, orders, projects, entries, year } = useStore();
