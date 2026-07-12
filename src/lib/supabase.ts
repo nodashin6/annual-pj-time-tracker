@@ -1,15 +1,23 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { readEnv } from "./env";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const envResult = readEnv();
+
+/** 環境変数の形式が不正な場合のメッセージ（UI で提示）。未設定は含まない。 */
+export const envIssues: string[] = envResult.ok ? [] : envResult.issues;
+
+const url = envResult.ok ? envResult.env.NEXT_PUBLIC_SUPABASE_URL : undefined;
+const anonKey = envResult.ok
+  ? envResult.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  : undefined;
 
 /** 環境変数が未設定なら null。UI 側で設定要求バナーを出す。 */
 export const supabase: SupabaseClient | null =
   url && anonKey ? createClient(url, anonKey) : null;
 
-export const isSupabaseConfigured = Boolean(url && anonKey);
+export const isSupabaseConfigured = envResult.ok && envResult.configured;
 
 /** DB (snake_case) と アプリ型 (camelCase) の対応 */
 

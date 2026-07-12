@@ -25,6 +25,17 @@ import {
   type DbAchievement,
   type DbEntry,
 } from "./supabase";
+import { notify } from "./notify";
+import {
+  validate,
+  teamInputSchema,
+  workerInputSchema,
+  clientInputSchema,
+  orderInputSchema,
+  projectInputSchema,
+  entryInputSchema,
+} from "./schemas";
+import type { z } from "zod";
 
 const PALETTE = [
   "#6366f1",
@@ -159,7 +170,21 @@ type Actions = {
 function fail(set: (p: Partial<State>) => void, e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
   set({ status: "error", error: msg });
+  notify.error(`データ操作に失敗しました: ${msg}`);
   console.error("[store]", msg);
+}
+
+/**
+ * 入力をスキーマで検証する。失敗時はトーストで通知して null を返す。
+ * ストアの各 add/update アクションの先頭で使う。
+ */
+function check<T>(schema: z.ZodType<T>, value: unknown): T | null {
+  const result = validate(schema, value);
+  if (!result.ok) {
+    notify.error(result.message);
+    return null;
+  }
+  return result.data;
 }
 
 export const useStore = create<State & Actions>()((set, get) => ({
@@ -244,10 +269,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Workers ----
   addWorker: async (w) => {
     if (!supabase) return;
+    const input = check(workerInputSchema, w);
+    if (!input) return;
     try {
       const { data, error } = await supabase
         .from("workers")
-        .insert({ name: w.name })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
@@ -258,6 +285,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateWorker: async (id, patch) => {
     if (!supabase) return;
+    if (!check(workerInputSchema.partial(), patch)) return;
     const prev = get().workers;
     set({ workers: prev.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
     try {
@@ -288,10 +316,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Teams ----
   addTeam: async (t) => {
     if (!supabase) return;
+    const input = check(teamInputSchema, t);
+    if (!input) return;
     try {
       const { data, error } = await supabase
         .from("teams")
-        .insert({ name: t.name })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
@@ -302,6 +332,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateTeam: async (id, patch) => {
     if (!supabase) return;
+    if (!check(teamInputSchema.partial(), patch)) return;
     const prev = get().teams;
     set({ teams: prev.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
     try {
@@ -334,10 +365,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Clients ----
   addClient: async (c) => {
     if (!supabase) return undefined;
+    const input = check(clientInputSchema, c);
+    if (!input) return undefined;
     try {
       const { data, error } = await supabase
         .from("clients")
-        .insert({ name: c.name })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
@@ -351,6 +384,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateClient: async (id, patch) => {
     if (!supabase) return;
+    if (!check(clientInputSchema.partial(), patch)) return;
     const prev = get().clients;
     set({ clients: prev.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
     try {
@@ -383,17 +417,19 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Orders ----
   addOrder: async (o) => {
     if (!supabase) return undefined;
+    const input = check(orderInputSchema, o);
+    if (!input) return undefined;
     try {
       const { data, error } = await supabase
         .from("orders")
         .insert({
-          client_id: o.clientId ?? null,
-          name: o.name,
-          fiscal_year: o.fiscalYear ?? null,
-          owner_worker_id: o.ownerWorkerId ?? null,
-          initial_hours: o.initialHours ?? 0,
-          planned_hours: o.plannedHours ?? 0,
-          budget_amount: o.budgetAmount ?? null,
+          client_id: input.clientId ?? null,
+          name: input.name,
+          fiscal_year: input.fiscalYear ?? null,
+          owner_worker_id: input.ownerWorkerId ?? null,
+          initial_hours: input.initialHours ?? 0,
+          planned_hours: input.plannedHours ?? 0,
+          budget_amount: input.budgetAmount ?? null,
         })
         .select()
         .single();
@@ -408,6 +444,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateOrder: async (id, patch) => {
     if (!supabase) return;
+    if (!check(orderInputSchema.partial(), patch)) return;
     const prev = get().orders;
     set({ orders: prev.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
     try {
@@ -458,17 +495,20 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Projects ----
   addProject: async (p) => {
     if (!supabase) return undefined;
+    const input = check(projectInputSchema, p);
+    if (!input) return undefined;
     try {
-      const color = p.color || PALETTE[get().projects.length % PALETTE.length];
+      const color =
+        input.color || PALETTE[get().projects.length % PALETTE.length];
       const { data, error } = await supabase
         .from("projects")
         .insert({
-          order_id: p.orderId,
-          team_id: p.teamId ?? null,
-          name: p.name,
+          order_id: input.orderId,
+          team_id: input.teamId ?? null,
+          name: input.name,
           color,
-          initial_hours: p.initialHours ?? 0,
-          planned_hours: p.plannedHours ?? 0,
+          initial_hours: input.initialHours ?? 0,
+          planned_hours: input.plannedHours ?? 0,
         })
         .select()
         .single();
@@ -483,6 +523,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateProject: async (id, patch) => {
     if (!supabase) return;
+    if (!check(projectInputSchema.partial(), patch)) return;
     const prev = get().projects;
     set({ projects: prev.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
     try {
@@ -558,6 +599,8 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Entries ----
   setHours: async ({ workerId, projectId, year, month, hours }) => {
     if (!supabase) return;
+    if (!check(entryInputSchema, { workerId, projectId, year, month, hours }))
+      return;
     const prev = get().entries;
     // 楽観的更新
     const idx = prev.findIndex(

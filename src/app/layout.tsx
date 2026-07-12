@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { DataGate } from "@/components/DataGate";
+import { Toaster } from "@/components/Toaster";
 
 export const metadata: Metadata = {
   title: "年間稼働トラッカー",
@@ -25,6 +26,7 @@ export default function RootLayout({
             </div>
           </main>
         </div>
+        <Toaster />
       </body>
     </html>
   );
