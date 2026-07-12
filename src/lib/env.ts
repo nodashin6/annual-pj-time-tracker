@@ -6,20 +6,18 @@
  */
 import { z } from "zod";
 
-const rawEnv = {
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-};
-
 const envSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z
-    .string()
-    .url("NEXT_PUBLIC_SUPABASE_URL は URL 形式である必要があります")
-    .optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(20, "NEXT_PUBLIC_SUPABASE_ANON_KEY が短すぎます")
-    .optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z
+      .string()
+      .url("NEXT_PUBLIC_SUPABASE_URL は URL 形式である必要があります")
+      .optional()
+  ),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().min(20, "NEXT_PUBLIC_SUPABASE_ANON_KEY が短すぎます").optional()
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -33,7 +31,10 @@ export type EnvResult =
  * - configured: URL と ANON_KEY が両方揃っているか（＝実接続モードか）
  */
 export function readEnv(): EnvResult {
-  const parsed = envSchema.safeParse(rawEnv);
+  const parsed = envSchema.safeParse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  });
   if (!parsed.success) {
     return {
       ok: false,
