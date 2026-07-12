@@ -53,7 +53,8 @@ function UnconfiguredNotice() {
           を実行（テーブル作成＋サンプル投入）。
         </li>
         <li>
-          プロジェクトルートに <code className="rounded bg-white px-1">.env.local</code>{" "}
+          プロジェクトルートに{" "}
+          <code className="rounded bg-white px-1">.env.local</code>{" "}
           を作成し、次を設定：
           <pre className="mt-1 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">{`NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>`}</pre>

@@ -10,9 +10,9 @@ export function YearSelector() {
 
   const years = availableYears(entries, year);
   // 隣接年も選べるよう前後1年を足す
-  const options = Array.from(
-    new Set([...years, year - 1, year + 1])
-  ).sort((a, b) => b - a);
+  const options = Array.from(new Set([...years, year - 1, year + 1])).sort(
+    (a, b) => b - a
+  );
 
   return (
     <div className="space-y-1">

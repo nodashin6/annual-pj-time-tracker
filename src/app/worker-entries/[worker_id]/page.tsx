@@ -9,7 +9,8 @@ export default function WorkerEntriesPage() {
   const params = useParams();
   const workerId = String(params.worker_id);
 
-  const { workers, projects, assignments, entries, year, setHours } = useStore();
+  const { workers, projects, assignments, entries, year, setHours } =
+    useStore();
   const worker = workers.find((w) => w.id === workerId);
 
   const assignedProjectIds = new Set(
@@ -58,7 +59,8 @@ export default function WorkerEntriesPage() {
           </span>
         </h2>
         <span className="text-sm text-slate-500">
-          合計 <span className="font-semibold tabular-nums">{grandTotal}</span> h
+          合計 <span className="font-semibold tabular-nums">{grandTotal}</span>{" "}
+          h
         </span>
       </div>
 
@@ -134,7 +136,9 @@ export default function WorkerEntriesPage() {
                     {monthTotal(m) || "—"}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-right tabular-nums">{grandTotal}</td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {grandTotal}
+                </td>
               </tr>
             </tfoot>
           </table>

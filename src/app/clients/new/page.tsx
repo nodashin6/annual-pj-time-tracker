@@ -40,7 +40,11 @@ export default function NewClientPage() {
           />
         </div>
         <div className="flex items-center gap-2 border-t border-slate-100 pt-4">
-          <button type="submit" className={BTN} disabled={!name.trim() || saving}>
+          <button
+            type="submit"
+            className={BTN}
+            disabled={!name.trim() || saving}
+          >
             {saving ? "作成中…" : "作成"}
           </button>
           <Link href="/clients" className={BTN_GHOST}>

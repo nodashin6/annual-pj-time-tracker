@@ -13,7 +13,9 @@ function NewOrderForm() {
 
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState(sp.get("client") ?? "");
-  const [fiscalYear, setFiscalYear] = useState<number>(new Date().getFullYear());
+  const [fiscalYear, setFiscalYear] = useState<number>(
+    new Date().getFullYear()
+  );
   const [ownerWorkerId, setOwnerWorkerId] = useState("");
   const [initialHours, setInitialHours] = useState(0);
   const [plannedHours, setPlannedHours] = useState(0);
@@ -140,7 +142,11 @@ function NewOrderForm() {
         </div>
 
         <div className="flex items-center gap-2 border-t border-slate-100 pt-4">
-          <button type="submit" className={BTN} disabled={!name.trim() || saving}>
+          <button
+            type="submit"
+            className={BTN}
+            disabled={!name.trim() || saving}
+          >
             {saving ? "作成中…" : "作成"}
           </button>
           <Link href="/orders" className={BTN_GHOST}>
@@ -154,7 +160,11 @@ function NewOrderForm() {
 
 export default function NewOrderPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-slate-400">読み込み中…</div>}>
+    <Suspense
+      fallback={
+        <div className="py-20 text-center text-slate-400">読み込み中…</div>
+      }
+    >
       <NewOrderForm />
     </Suspense>
   );

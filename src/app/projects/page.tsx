@@ -22,7 +22,9 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">プロジェクト一覧</h1>
-          <p className="text-sm text-slate-500">{year}年 — 受注を細分化した作業単位</p>
+          <p className="text-sm text-slate-500">
+            {year}年 — 受注を細分化した作業単位
+          </p>
         </div>
         <Link href="/projects/new" className={BTN}>
           + 新規プロジェクト
@@ -48,7 +50,10 @@ export default function ProjectsPage() {
               {annual.map(({ project: p, hours }) => {
                 const order = orderOf(p.orderId);
                 return (
-                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr
+                    key={p.id}
+                    className="border-b border-slate-100 hover:bg-slate-50"
+                  >
                     <td className="py-2 pr-4 text-slate-500">
                       {clientName(order?.clientId)}
                     </td>
@@ -72,7 +77,9 @@ export default function ProjectsPage() {
                         {p.name}
                       </Link>
                     </td>
-                    <td className="py-2 pr-4 text-slate-500">{teamName(p.teamId)}</td>
+                    <td className="py-2 pr-4 text-slate-500">
+                      {teamName(p.teamId)}
+                    </td>
                     <td className="py-2 pr-4 text-right tabular-nums">
                       {assigneeCount(p.id)}
                     </td>
@@ -91,7 +98,8 @@ export default function ProjectsPage() {
               {annual.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-400">
-                    プロジェクトがありません。「+ 新規プロジェクト」から追加してください。
+                    プロジェクトがありません。「+
+                    新規プロジェクト」から追加してください。
                   </td>
                 </tr>
               )}

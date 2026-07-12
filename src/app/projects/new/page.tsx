@@ -7,8 +7,14 @@ import { useStore } from "@/lib/store";
 import { CARD, INPUT, BTN, BTN_GHOST, LABEL } from "@/lib/ui";
 
 const PALETTE = [
-  "#6366f1", "#10b981", "#f59e0b", "#ef4444",
-  "#0ea5e9", "#8b5cf6", "#ec4899", "#14b8a6",
+  "#6366f1",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
 ];
 
 function NewProjectForm() {
@@ -43,7 +49,10 @@ function NewProjectForm() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center gap-2">
-        <Link href="/projects" className="text-sm text-slate-500 hover:underline">
+        <Link
+          href="/projects"
+          className="text-sm text-slate-500 hover:underline"
+        >
           ← プロジェクト一覧
         </Link>
       </div>
@@ -153,7 +162,11 @@ function NewProjectForm() {
 
 export default function NewProjectPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-slate-400">読み込み中…</div>}>
+    <Suspense
+      fallback={
+        <div className="py-20 text-center text-slate-400">読み込み中…</div>
+      }
+    >
       <NewProjectForm />
     </Suspense>
   );

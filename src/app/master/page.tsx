@@ -9,9 +9,7 @@ export default function MasterPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold">マスタ管理</h1>
-        <p className="text-sm text-slate-500">
-          ワーカーとチームを管理します
-        </p>
+        <p className="text-sm text-slate-500">ワーカーとチームを管理します</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -19,7 +17,9 @@ export default function MasterPage() {
         <TeamsSection />
       </div>
 
-      <p className="text-xs text-slate-400">データは Supabase に保存されます。</p>
+      <p className="text-xs text-slate-400">
+        データは Supabase に保存されます。
+      </p>
     </div>
   );
 }

@@ -29,7 +29,9 @@ export default function ClientsPage() {
               <tr className="border-b border-slate-200 text-left text-slate-500">
                 <th className="py-2 pr-4 font-medium">顧客名</th>
                 <th className="py-2 pr-4 text-right font-medium">受注数</th>
-                <th className="py-2 pr-4 text-right font-medium">予定工数 計</th>
+                <th className="py-2 pr-4 text-right font-medium">
+                  予定工数 計
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -37,7 +39,10 @@ export default function ClientsPage() {
                 const os = ordersOf(c.id);
                 const planned = os.reduce((a, o) => a + o.plannedHours, 0);
                 return (
-                  <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr
+                    key={c.id}
+                    className="border-b border-slate-100 hover:bg-slate-50"
+                  >
                     <td className="py-2 pr-4 font-medium">
                       <Link
                         href={`/clients/${c.id}`}

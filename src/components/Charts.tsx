@@ -15,8 +15,7 @@ import {
 } from "recharts";
 import type { Project } from "@/lib/types";
 
-const CARD =
-  "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
+const CARD = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 
 export function MonthlyStackedBar({
   data,
@@ -31,7 +30,10 @@ export function MonthlyStackedBar({
         月次 工数（プロジェクト別・積み上げ）
       </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} unit="h" />

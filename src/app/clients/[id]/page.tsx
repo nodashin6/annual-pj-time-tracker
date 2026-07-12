@@ -16,7 +16,10 @@ export default function ClientDetailPage() {
   if (!client) {
     return (
       <div className="space-y-3">
-        <Link href="/clients" className="text-sm text-slate-500 hover:underline">
+        <Link
+          href="/clients"
+          className="text-sm text-slate-500 hover:underline"
+        >
           ← 顧客一覧
         </Link>
         <p className="text-slate-400">顧客が見つかりません。</p>
@@ -40,7 +43,10 @@ export default function ClientDetailPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link href="/clients" className="text-sm text-slate-500 hover:underline">
+        <Link
+          href="/clients"
+          className="text-sm text-slate-500 hover:underline"
+        >
           ← 顧客一覧
         </Link>
         <button onClick={del} className={DEL}>
@@ -83,7 +89,10 @@ export default function ClientDetailPage() {
             </thead>
             <tbody>
               {clientOrders.map((o) => (
-                <tr key={o.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr
+                  key={o.id}
+                  className="border-b border-slate-100 hover:bg-slate-50"
+                >
                   <td className="py-2 pr-4 font-medium">
                     <Link
                       href={`/orders/${o.id}`}

@@ -27,8 +27,14 @@ import {
 } from "./supabase";
 
 const PALETTE = [
-  "#6366f1", "#10b981", "#f59e0b", "#ef4444",
-  "#0ea5e9", "#8b5cf6", "#ec4899", "#14b8a6",
+  "#6366f1",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
 ];
 
 const num = (v: number | string | null | undefined): number =>
@@ -110,7 +116,10 @@ type Actions = {
   setYear: (year: number) => void;
 
   addWorker: (w: Omit<Worker, "id">) => Promise<void>;
-  updateWorker: (id: string, patch: Partial<Omit<Worker, "id">>) => Promise<void>;
+  updateWorker: (
+    id: string,
+    patch: Partial<Omit<Worker, "id">>
+  ) => Promise<void>;
   removeWorker: (id: string) => Promise<void>;
 
   addTeam: (t: Omit<Team, "id">) => Promise<void>;
@@ -118,7 +127,10 @@ type Actions = {
   removeTeam: (id: string) => Promise<void>;
 
   addClient: (c: Omit<Client, "id">) => Promise<string | undefined>;
-  updateClient: (id: string, patch: Partial<Omit<Client, "id">>) => Promise<void>;
+  updateClient: (
+    id: string,
+    patch: Partial<Omit<Client, "id">>
+  ) => Promise<void>;
   removeClient: (id: string) => Promise<void>;
 
   addOrder: (o: Omit<Order, "id">) => Promise<string | undefined>;
@@ -126,7 +138,10 @@ type Actions = {
   removeOrder: (id: string) => Promise<void>;
 
   addProject: (p: Omit<Project, "id">) => Promise<string | undefined>;
-  updateProject: (id: string, patch: Partial<Omit<Project, "id">>) => Promise<void>;
+  updateProject: (
+    id: string,
+    patch: Partial<Omit<Project, "id">>
+  ) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
 
   addAssignment: (workerId: string, projectId: string) => Promise<void>;
@@ -144,7 +159,6 @@ type Actions = {
 function fail(set: (p: Partial<State>) => void, e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
   set({ status: "error", error: msg });
-  // eslint-disable-next-line no-console
   console.error("[store]", msg);
 }
 
@@ -192,8 +206,15 @@ export const useStore = create<State & Actions>()((set, get) => ({
         supabase.from("entries").select("*"),
       ]);
       for (const r of [
-        teamRes, workerRes, clientRes, orderRes, projectRes,
-        milestoneRes, assignmentRes, achievementRes, entryRes,
+        teamRes,
+        workerRes,
+        clientRes,
+        orderRes,
+        projectRes,
+        milestoneRes,
+        assignmentRes,
+        achievementRes,
+        entryRes,
       ]) {
         if (r.error) throw r.error;
       }
@@ -205,7 +226,9 @@ export const useStore = create<State & Actions>()((set, get) => ({
         projects: (projectRes.data as DbProject[]).map(toProject),
         milestones: (milestoneRes.data as DbMilestone[]).map(toMilestone),
         assignments: (assignmentRes.data as DbAssignment[]).map(toAssignment),
-        achievements: (achievementRes.data as DbAchievement[]).map(toAchievement),
+        achievements: (achievementRes.data as DbAchievement[]).map(
+          toAchievement
+        ),
         entries: (entryRes.data as DbEntry[]).map(toEntry),
         status: "ready",
         error: null,
@@ -391,11 +414,14 @@ export const useStore = create<State & Actions>()((set, get) => ({
       const db: Record<string, unknown> = {};
       if (patch.clientId !== undefined) db.client_id = patch.clientId ?? null;
       if (patch.name !== undefined) db.name = patch.name;
-      if (patch.fiscalYear !== undefined) db.fiscal_year = patch.fiscalYear ?? null;
+      if (patch.fiscalYear !== undefined)
+        db.fiscal_year = patch.fiscalYear ?? null;
       if (patch.ownerWorkerId !== undefined)
         db.owner_worker_id = patch.ownerWorkerId ?? null;
-      if (patch.initialHours !== undefined) db.initial_hours = patch.initialHours;
-      if (patch.plannedHours !== undefined) db.planned_hours = patch.plannedHours;
+      if (patch.initialHours !== undefined)
+        db.initial_hours = patch.initialHours;
+      if (patch.plannedHours !== undefined)
+        db.planned_hours = patch.plannedHours;
       if (patch.budgetAmount !== undefined)
         db.budget_amount = patch.budgetAmount ?? null;
       const { error } = await supabase.from("orders").update(db).eq("id", id);
@@ -465,8 +491,10 @@ export const useStore = create<State & Actions>()((set, get) => ({
       if (patch.teamId !== undefined) db.team_id = patch.teamId ?? null;
       if (patch.name !== undefined) db.name = patch.name;
       if (patch.color !== undefined) db.color = patch.color;
-      if (patch.initialHours !== undefined) db.initial_hours = patch.initialHours;
-      if (patch.plannedHours !== undefined) db.planned_hours = patch.plannedHours;
+      if (patch.initialHours !== undefined)
+        db.initial_hours = patch.initialHours;
+      if (patch.plannedHours !== undefined)
+        db.planned_hours = patch.plannedHours;
       const { error } = await supabase.from("projects").update(db).eq("id", id);
       if (error) throw error;
     } catch (e) {
@@ -516,7 +544,10 @@ export const useStore = create<State & Actions>()((set, get) => ({
   removeAssignment: async (id) => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.from("assignments").delete().eq("id", id);
+      const { error } = await supabase
+        .from("assignments")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
       set((s) => ({ assignments: s.assignments.filter((a) => a.id !== id) }));
     } catch (e) {

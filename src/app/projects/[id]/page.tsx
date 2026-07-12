@@ -33,7 +33,10 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="space-y-3">
-        <Link href="/projects" className="text-sm text-slate-500 hover:underline">
+        <Link
+          href="/projects"
+          className="text-sm text-slate-500 hover:underline"
+        >
           ← プロジェクト一覧
         </Link>
         <p className="text-slate-400">プロジェクトが見つかりません。</p>
@@ -44,7 +47,9 @@ export default function ProjectDetailPage() {
   const order = orders.find((o) => o.id === project.orderId);
   const projMilestones = milestones.filter((m) => m.projectId === id);
   const projAssignments = assignments.filter((a) => a.projectId === id);
-  const yEntries = filterByYear(entries, year).filter((e) => e.projectId === id);
+  const yEntries = filterByYear(entries, year).filter(
+    (e) => e.projectId === id
+  );
   const actualHours = yEntries.reduce((a, e) => a + e.hours, 0);
   const monthly = MONTHS.map((m) =>
     yEntries.filter((e) => e.month === m).reduce((a, e) => a + e.hours, 0)
@@ -61,7 +66,11 @@ export default function ProjectDetailPage() {
   };
 
   const del = async () => {
-    if (!confirm(`プロジェクト「${project.name}」を削除します。工数・アサインも削除されます。よろしいですか？`))
+    if (
+      !confirm(
+        `プロジェクト「${project.name}」を削除します。工数・アサインも削除されます。よろしいですか？`
+      )
+    )
       return;
     await removeProject(id);
     router.push("/projects");
@@ -70,7 +79,10 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <Link href="/projects" className="text-sm text-slate-500 hover:underline">
+        <Link
+          href="/projects"
+          className="text-sm text-slate-500 hover:underline"
+        >
           ← プロジェクト一覧
         </Link>
         <button onClick={del} className={DEL}>
@@ -88,16 +100,29 @@ export default function ProjectDetailPage() {
       {order && (
         <p className="text-sm text-slate-500">
           受注:{" "}
-          <Link href={`/orders/${order.id}`} className="text-indigo-600 hover:underline">
+          <Link
+            href={`/orders/${order.id}`}
+            className="text-indigo-600 hover:underline"
+          >
             {order.name}
           </Link>
         </p>
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <StatCard label="当初工数" value={`${project.initialHours.toLocaleString()} h`} />
-        <StatCard label="予定工数" value={`${project.plannedHours.toLocaleString()} h`} />
-        <StatCard label="実績工数" value={`${actualHours.toLocaleString()} h`} sub={`${year}年`} />
+        <StatCard
+          label="当初工数"
+          value={`${project.initialHours.toLocaleString()} h`}
+        />
+        <StatCard
+          label="予定工数"
+          value={`${project.plannedHours.toLocaleString()} h`}
+        />
+        <StatCard
+          label="実績工数"
+          value={`${actualHours.toLocaleString()} h`}
+          sub={`${year}年`}
+        />
         <StatCard
           label="消化率"
           value={`${consumption} %`}
@@ -267,7 +292,9 @@ export default function ProjectDetailPage() {
             </div>
           ))}
           {projMilestones.length === 0 && (
-            <p className="text-sm text-slate-400">マイルストーンがありません。</p>
+            <p className="text-sm text-slate-400">
+              マイルストーンがありません。
+            </p>
           )}
         </div>
       </div>

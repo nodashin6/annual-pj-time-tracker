@@ -5,14 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { filterByYear } from "@/lib/aggregate";
 import { StatCard } from "@/components/StatCard";
-import {
-  CARD,
-  INPUT,
-  LABEL,
-  DEL,
-  BTN,
-  consumptionColor,
-} from "@/lib/ui";
+import { CARD, INPUT, LABEL, DEL, BTN, consumptionColor } from "@/lib/ui";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -60,7 +53,11 @@ export default function OrderDetailPage() {
       .reduce((a, e) => a + e.hours, 0);
 
   const del = async () => {
-    if (!confirm(`受注「${order.name}」を削除します。配下のプロジェクト・工数も削除されます。よろしいですか？`))
+    if (
+      !confirm(
+        `受注「${order.name}」を削除します。配下のプロジェクト・工数も削除されます。よろしいですか？`
+      )
+    )
       return;
     await removeOrder(id);
     router.push("/orders");
@@ -80,9 +77,19 @@ export default function OrderDetailPage() {
       <h1 className="text-xl font-bold">{order.name}</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="当初工数" value={`${order.initialHours.toLocaleString()} h`} />
-        <StatCard label="予定工数" value={`${order.plannedHours.toLocaleString()} h`} />
-        <StatCard label="実績工数" value={`${actualHours.toLocaleString()} h`} sub={`${year}年`} />
+        <StatCard
+          label="当初工数"
+          value={`${order.initialHours.toLocaleString()} h`}
+        />
+        <StatCard
+          label="予定工数"
+          value={`${order.plannedHours.toLocaleString()} h`}
+        />
+        <StatCard
+          label="実績工数"
+          value={`${actualHours.toLocaleString()} h`}
+          sub={`${year}年`}
+        />
         <StatCard
           label="消化率"
           value={`${consumption} %`}
@@ -127,7 +134,9 @@ export default function OrderDetailPage() {
               value={order.fiscalYear ?? ""}
               onChange={(e) =>
                 updateOrder(id, {
-                  fiscalYear: e.target.value ? Number(e.target.value) : undefined,
+                  fiscalYear: e.target.value
+                    ? Number(e.target.value)
+                    : undefined,
                 })
               }
               className={`w-full text-right ${INPUT}`}
@@ -200,7 +209,9 @@ export default function OrderDetailPage() {
       {/* 配下プロジェクト */}
       <div className={CARD}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold">プロジェクト（{orderProjects.length}）</h2>
+          <h2 className="font-semibold">
+            プロジェクト（{orderProjects.length}）
+          </h2>
           <Link href={`/projects/new?order=${id}`} className={BTN}>
             + プロジェクト追加
           </Link>
@@ -215,7 +226,10 @@ export default function OrderDetailPage() {
             </thead>
             <tbody>
               {orderProjects.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr
+                  key={p.id}
+                  className="border-b border-slate-100 hover:bg-slate-50"
+                >
                   <td className="py-2 pr-4 font-medium">
                     <span
                       className="mr-2 inline-block h-2 w-2 rounded-full align-middle"
