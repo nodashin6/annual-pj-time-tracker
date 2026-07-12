@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { orderProgress } from "@/lib/aggregate";
-import { YearSelector } from "@/components/YearSelector";
 import { CARD, BTN, consumptionColor } from "@/lib/ui";
 
 export default function OrdersPage() {
@@ -24,12 +23,9 @@ export default function OrdersPage() {
             {year}年 — 受注ごとの工数充足
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <YearSelector />
-          <Link href="/orders/new" className={BTN}>
-            + 新規受注
-          </Link>
-        </div>
+        <Link href="/orders/new" className={BTN}>
+          + 新規受注
+        </Link>
       </div>
 
       <div className={CARD}>

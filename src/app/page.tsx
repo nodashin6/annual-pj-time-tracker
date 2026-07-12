@@ -9,7 +9,6 @@ import {
   orgTotals,
 } from "@/lib/aggregate";
 import { StatCard } from "@/components/StatCard";
-import { YearSelector } from "@/components/YearSelector";
 import { MonthlyStackedBar, ProjectPie } from "@/components/Charts";
 
 /** 消化率の色: 予定超過は赤、健全域は緑、余裕は青。 */
@@ -34,14 +33,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">ダッシュボード</h1>
-          <p className="text-sm text-slate-500">
-            {year}年 — 受注工数の充足状況
-          </p>
-        </div>
-        <YearSelector />
+      <div>
+        <h1 className="text-xl font-bold">ダッシュボード</h1>
+        <p className="text-sm text-slate-500">{year}年 — 受注工数の充足状況</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { annualByProject } from "@/lib/aggregate";
-import { YearSelector } from "@/components/YearSelector";
 import { CARD, BTN } from "@/lib/ui";
 
 export default function ProjectsPage() {
@@ -25,12 +24,9 @@ export default function ProjectsPage() {
           <h1 className="text-xl font-bold">プロジェクト一覧</h1>
           <p className="text-sm text-slate-500">{year}年 — 受注を細分化した作業単位</p>
         </div>
-        <div className="flex items-center gap-3">
-          <YearSelector />
-          <Link href="/projects/new" className={BTN}>
-            + 新規プロジェクト
-          </Link>
-        </div>
+        <Link href="/projects/new" className={BTN}>
+          + 新規プロジェクト
+        </Link>
       </div>
 
       <div className={CARD}>

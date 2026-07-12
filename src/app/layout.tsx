@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Nav } from "@/components/Nav";
+import { Sidebar } from "@/components/Sidebar";
 import { DataGate } from "@/components/DataGate";
 
 export const metadata: Metadata = {
@@ -17,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <div className="min-h-screen">
-          <Nav />
-          <main className="mx-auto max-w-6xl px-4 py-6">
-            <DataGate>{children}</DataGate>
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <main className="min-w-0 flex-1 px-6 py-6">
+            <div className="mx-auto max-w-6xl">
+              <DataGate>{children}</DataGate>
+            </div>
           </main>
         </div>
       </body>

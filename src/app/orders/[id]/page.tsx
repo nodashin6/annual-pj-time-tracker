@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { filterByYear } from "@/lib/aggregate";
 import { StatCard } from "@/components/StatCard";
-import { YearSelector } from "@/components/YearSelector";
 import {
   CARD,
   INPUT,
@@ -73,12 +72,9 @@ export default function OrderDetailPage() {
         <Link href="/orders" className="text-sm text-slate-500 hover:underline">
           ← 受注一覧
         </Link>
-        <div className="flex items-center gap-3">
-          <YearSelector />
-          <button onClick={del} className={DEL}>
-            受注を削除
-          </button>
-        </div>
+        <button onClick={del} className={DEL}>
+          受注を削除
+        </button>
       </div>
 
       <h1 className="text-xl font-bold">{order.name}</h1>

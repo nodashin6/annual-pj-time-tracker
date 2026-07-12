@@ -6,7 +6,6 @@ import { useStore } from "@/lib/store";
 import { filterByYear } from "@/lib/aggregate";
 import { MONTHS, MONTH_LABELS } from "@/lib/types";
 import { StatCard } from "@/components/StatCard";
-import { YearSelector } from "@/components/YearSelector";
 import { CARD, INPUT, LABEL, DEL, consumptionColor } from "@/lib/ui";
 
 export default function ProjectDetailPage() {
@@ -74,12 +73,9 @@ export default function ProjectDetailPage() {
         <Link href="/projects" className="text-sm text-slate-500 hover:underline">
           ← プロジェクト一覧
         </Link>
-        <div className="flex items-center gap-3">
-          <YearSelector />
-          <button onClick={del} className={DEL}>
-            プロジェクトを削除
-          </button>
-        </div>
+        <button onClick={del} className={DEL}>
+          プロジェクトを削除
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
