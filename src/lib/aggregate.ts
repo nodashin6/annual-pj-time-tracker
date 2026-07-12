@@ -1,4 +1,4 @@
-import type { Worker, Project, Entry } from "./types";
+import type { Worker, Project, Order, Entry } from "./types";
 import { MONTHS, MONTH_LABELS } from "./types";
 
 export function filterByYear(entries: Entry[], year: number): Entry[] {
@@ -44,84 +44,93 @@ export function annualByProject(
     .sort((a, b) => b.hours - a.hours);
 }
 
-/** ワーカー別 月次稼働率（投下時間 / キャパ）。 */
-export function monthlyUtilization(
+/** ワーカー別 年間投下工数（合計時間のみ。稼働率は扱わない）。 */
+export type WorkerHours = { worker: Worker; totalHours: number };
+export function workerHours(
   entries: Entry[],
   workers: Worker[],
   year: number
-): Array<Record<string, number | string>> {
+): WorkerHours[] {
   const yEntries = filterByYear(entries, year);
-  return MONTHS.map((month, i) => {
-    const row: Record<string, number | string> = { month: MONTH_LABELS[i] };
-    for (const w of workers) {
-      const hours = yEntries
-        .filter((e) => e.month === month && e.workerId === w.id)
-        .reduce((a, e) => a + e.hours, 0);
-      const util =
-        w.monthlyCapacityHours > 0
-          ? Math.round((hours / w.monthlyCapacityHours) * 1000) / 10
-          : 0;
-      row[w.id] = util;
-    }
-    return row;
-  });
+  return workers
+    .map((worker) => ({
+      worker,
+      totalHours: yEntries
+        .filter((e) => e.workerId === worker.id)
+        .reduce((a, e) => a + e.hours, 0),
+    }))
+    .sort((a, b) => b.totalHours - a.totalHours);
 }
 
-export type WorkerSummary = {
-  worker: Worker;
-  totalHours: number;
-  capacityHours: number;
-  utilization: number; // %
+/**
+ * 受注別 工数の充足状況。
+ * 予定工数(order.plannedHours) に対して 実績(その受注配下プロジェクトの entries 合計) が
+ * どれだけ消化されたかを見る。本システムの主眼。
+ */
+export type OrderProgress = {
+  order: Order;
+  initialHours: number;
+  plannedHours: number;
+  actualHours: number;
+  /** 実績 / 予定 （%）。予定0なら0。 */
+  consumption: number;
 };
-
-/** ワーカー別 年間サマリ（合計時間・年間キャパ・稼働率）。 */
-export function workerSummaries(
+export function orderProgress(
   entries: Entry[],
-  workers: Worker[],
+  orders: Order[],
+  projects: Project[],
   year: number
-): WorkerSummary[] {
+): OrderProgress[] {
   const yEntries = filterByYear(entries, year);
-  return workers.map((worker) => {
-    const totalHours = yEntries
-      .filter((e) => e.workerId === worker.id)
-      .reduce((a, e) => a + e.hours, 0);
-    const capacityHours = worker.monthlyCapacityHours * 12;
-    const utilization =
-      capacityHours > 0
-        ? Math.round((totalHours / capacityHours) * 1000) / 10
-        : 0;
-    return { worker, totalHours, capacityHours, utilization };
-  });
+  return orders
+    .map((order) => {
+      const pids = new Set(
+        projects.filter((p) => p.orderId === order.id).map((p) => p.id)
+      );
+      const actualHours = yEntries
+        .filter((e) => pids.has(e.projectId))
+        .reduce((a, e) => a + e.hours, 0);
+      const consumption =
+        order.plannedHours > 0
+          ? Math.round((actualHours / order.plannedHours) * 1000) / 10
+          : 0;
+      return {
+        order,
+        initialHours: order.initialHours,
+        plannedHours: order.plannedHours,
+        actualHours,
+        consumption,
+      };
+    })
+    .sort((a, b) => b.plannedHours - a.plannedHours);
 }
 
 export type Totals = {
   totalHours: number;
-  totalCapacity: number;
-  utilization: number; // %
+  totalPlanned: number;
+  /** 実績 / 予定 （%） */
+  consumption: number;
   activeProjects: number;
 };
 
 export function orgTotals(
   entries: Entry[],
-  workers: Worker[],
+  orders: Order[],
   projects: Project[],
   year: number
 ): Totals {
   const yEntries = filterByYear(entries, year);
   const totalHours = yEntries.reduce((a, e) => a + e.hours, 0);
-  const totalCapacity = workers.reduce(
-    (a, w) => a + w.monthlyCapacityHours * 12,
-    0
-  );
+  const totalPlanned = orders.reduce((a, o) => a + o.plannedHours, 0);
   const activeProjects = projects.filter((p) =>
     yEntries.some((e) => e.projectId === p.id && e.hours > 0)
   ).length;
   return {
     totalHours,
-    totalCapacity,
-    utilization:
-      totalCapacity > 0
-        ? Math.round((totalHours / totalCapacity) * 1000) / 10
+    totalPlanned,
+    consumption:
+      totalPlanned > 0
+        ? Math.round((totalHours / totalPlanned) * 1000) / 10
         : 0,
     activeProjects,
   };

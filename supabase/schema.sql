@@ -17,11 +17,12 @@ create table if not exists public.teams (
   created_at timestamptz not null default now()
 );
 
--- ワーカー（作業者）。チームには属さず、worker_projects でプロジェクトへ直接アサインする。
+-- ワーカー（作業者）。チームには属さず、assignments でプロジェクトへ直接アサインする。
+-- 稼働キャパは持たない（本システムはプロジェクト工数の充足を主眼とし、
+-- ワーカー個人の稼働率は観測対象にしない）。
 create table if not exists public.workers (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  monthly_capacity_hours integer not null default 160,
   created_at timestamptz not null default now()
 );
 
@@ -41,7 +42,9 @@ create table if not exists public.orders (
   fiscal_year integer,
   -- 社内担当ワーカー（任意）
   owner_worker_id uuid references public.workers(id) on delete set null,
-  -- 想定工数（時間）
+  -- 当初工数（受注時点の初期見積, 時間）
+  initial_hours numeric(10, 1) not null default 0,
+  -- 予定工数（現時点の予定, 時間）
   planned_hours numeric(10, 1) not null default 0,
   -- 予算（金額）
   budget_amount numeric(14, 2),
@@ -58,6 +61,10 @@ create table if not exists public.projects (
   team_id uuid references public.teams(id) on delete set null,
   name text not null,
   color text not null default '#6366f1',
+  -- 当初工数（プロジェクト単位の初期見積, 時間）。受注の当初工数とは別。
+  initial_hours numeric(10, 1) not null default 0,
+  -- 予定工数（プロジェクト単位の現時点の予定, 時間）
+  planned_hours numeric(10, 1) not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -171,29 +178,34 @@ begin
   insert into public.teams (name) values ('開発2部') returning id into t2;
 
   -- ワーカー
-  insert into public.workers (name, monthly_capacity_hours) values ('佐藤 太郎', 160) returning id into m1;
-  insert into public.workers (name, monthly_capacity_hours) values ('鈴木 花子', 160) returning id into m2;
-  insert into public.workers (name, monthly_capacity_hours) values ('高橋 健',   140) returning id into m3;
-  insert into public.workers (name, monthly_capacity_hours) values ('田中 誠',   160) returning id into m4;
+  insert into public.workers (name) values ('佐藤 太郎') returning id into m1;
+  insert into public.workers (name) values ('鈴木 花子') returning id into m2;
+  insert into public.workers (name) values ('高橋 健')   returning id into m3;
+  insert into public.workers (name) values ('田中 誠')   returning id into m4;
 
   -- 顧客
   insert into public.clients (name) values ('社内') returning id into c_in;
   insert into public.clients (name) values ('A社')  returning id into c_a;
   insert into public.clients (name) values ('B社')  returning id into c_b;
 
-  -- 受注（order）
-  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, planned_hours, budget_amount)
-    values (c_in, '社内基盤刷新 受注', yr, m1, 3000, 30000000) returning id into o1;
-  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, planned_hours, budget_amount)
-    values (c_a,  'ECサイト構築 受注',  yr, m2, 2400, 24000000) returning id into o2;
-  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, planned_hours, budget_amount)
-    values (c_b,  '保守運用 受注',       yr, m3, 1200, 12000000) returning id into o3;
+  -- 受注（order）。initial_hours=当初工数, planned_hours=予定工数。
+  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, initial_hours, planned_hours, budget_amount)
+    values (c_in, '社内基盤刷新 受注', yr, m1, 3000, 3200, 30000000) returning id into o1;
+  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, initial_hours, planned_hours, budget_amount)
+    values (c_a,  'ECサイト構築 受注',  yr, m2, 2400, 2400, 24000000) returning id into o2;
+  insert into public.orders (client_id, name, fiscal_year, owner_worker_id, initial_hours, planned_hours, budget_amount)
+    values (c_b,  '保守運用 受注',       yr, m3, 1200, 1000, 12000000) returning id into o3;
 
-  -- プロジェクト（受注を細分化。1プロジェクト=1チーム）
-  insert into public.projects (order_id, team_id, name, color) values (o1, t1, '社内基盤刷新', '#6366f1') returning id into p1;
-  insert into public.projects (order_id, team_id, name, color) values (o2, t1, 'ECサイト構築', '#10b981') returning id into p2;
-  insert into public.projects (order_id, team_id, name, color) values (o3, t2, '保守運用',     '#f59e0b') returning id into p3;
-  insert into public.projects (order_id, team_id, name, color) values (o1, t2, 'R&D / 提案',   '#ef4444') returning id into p4;
+  -- プロジェクト（受注を細分化。1プロジェクト=1チーム）。
+  -- 当初/予定工数はプロジェクト固有で、受注の値や他PJとの和とは独立。
+  insert into public.projects (order_id, team_id, name, color, initial_hours, planned_hours)
+    values (o1, t1, '社内基盤刷新', '#6366f1', 1500, 1600) returning id into p1;
+  insert into public.projects (order_id, team_id, name, color, initial_hours, planned_hours)
+    values (o2, t1, 'ECサイト構築', '#10b981', 2000, 2100) returning id into p2;
+  insert into public.projects (order_id, team_id, name, color, initial_hours, planned_hours)
+    values (o3, t2, '保守運用',     '#f59e0b',  900,  850) returning id into p3;
+  insert into public.projects (order_id, team_id, name, color, initial_hours, planned_hours)
+    values (o1, t2, 'R&D / 提案',   '#ef4444',  400,  500) returning id into p4;
 
   -- マイルストーン（各プロジェクトの区間。ここでは 2026通期）
   insert into public.milestones (project_id, name, start_date, end_date)

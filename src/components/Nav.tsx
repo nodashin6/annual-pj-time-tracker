@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "ダッシュボード" },
-  { href: "/entries", label: "工数入力" },
-  { href: "/setup", label: "マスタ設定" },
+  { href: "/clients", label: "顧客" },
+  { href: "/orders", label: "受注" },
+  { href: "/projects", label: "プロジェクト" },
+  { href: "/worker-entries", label: "工数入力" },
+  { href: "/master", label: "マスタ" },
 ];
 
 export function Nav() {

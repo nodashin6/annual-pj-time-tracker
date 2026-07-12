@@ -21,7 +21,6 @@ export type DbTeam = {
 export type DbWorker = {
   id: string;
   name: string;
-  monthly_capacity_hours: number;
 };
 
 export type DbClient = {
@@ -35,6 +34,7 @@ export type DbOrder = {
   name: string;
   fiscal_year: number | null;
   owner_worker_id: string | null;
+  initial_hours: number | string;
   planned_hours: number | string;
   budget_amount: number | string | null;
 };
@@ -45,6 +45,8 @@ export type DbProject = {
   team_id: string | null;
   name: string;
   color: string;
+  initial_hours: number | string;
+  planned_hours: number | string;
 };
 
 export type DbMilestone = {
