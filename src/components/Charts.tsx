@@ -3,8 +3,6 @@
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -14,12 +12,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
-import type { Worker, Project } from "@/lib/types";
+import type { Project } from "@/lib/types";
 
-const CARD =
-  "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
+const CARD = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 
 export function MonthlyStackedBar({
   data,
@@ -34,7 +30,10 @@ export function MonthlyStackedBar({
         月次 工数（プロジェクト別・積み上げ）
       </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} unit="h" />
@@ -50,44 +49,6 @@ export function MonthlyStackedBar({
             />
           ))}
         </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-export function UtilizationLine({
-  data,
-  workers,
-}: {
-  data: Array<Record<string, number | string>>;
-  workers: Worker[];
-}) {
-  const palette = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0ea5e9", "#8b5cf6"];
-  return (
-    <div className={CARD}>
-      <h3 className="mb-3 text-sm font-semibold text-slate-700">
-        月次 稼働率（メンバー別 / 100%基準線）
-      </h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} unit="%" />
-          <Tooltip formatter={(v: number) => `${v} %`} />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 4" />
-          {workers.map((w, i) => (
-            <Line
-              key={w.id}
-              type="monotone"
-              dataKey={w.id}
-              name={w.name}
-              stroke={palette[i % palette.length]}
-              strokeWidth={2}
-              dot={{ r: 2 }}
-            />
-          ))}
-        </LineChart>
       </ResponsiveContainer>
     </div>
   );

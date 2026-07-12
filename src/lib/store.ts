@@ -25,11 +25,18 @@ import {
   type DbAchievement,
   type DbEntry,
 } from "./supabase";
-
-const PALETTE = [
-  "#6366f1", "#10b981", "#f59e0b", "#ef4444",
-  "#0ea5e9", "#8b5cf6", "#ec4899", "#14b8a6",
-];
+import { notify } from "./notify";
+import {
+  validate,
+  teamInputSchema,
+  workerInputSchema,
+  clientInputSchema,
+  orderInputSchema,
+  projectInputSchema,
+  entryInputSchema,
+} from "./schemas";
+import type { z } from "zod";
+import { PALETTE } from "./ui";
 
 const num = (v: number | string | null | undefined): number =>
   v == null ? 0 : Number(v);
@@ -39,7 +46,6 @@ const toTeam = (r: DbTeam): Team => ({ id: r.id, name: r.name });
 const toWorker = (r: DbWorker): Worker => ({
   id: r.id,
   name: r.name,
-  monthlyCapacityHours: r.monthly_capacity_hours,
 });
 const toClient = (r: DbClient): Client => ({ id: r.id, name: r.name });
 const toOrder = (r: DbOrder): Order => ({
@@ -48,6 +54,7 @@ const toOrder = (r: DbOrder): Order => ({
   name: r.name,
   fiscalYear: r.fiscal_year ?? undefined,
   ownerWorkerId: r.owner_worker_id ?? undefined,
+  initialHours: num(r.initial_hours),
   plannedHours: num(r.planned_hours),
   budgetAmount: r.budget_amount == null ? undefined : num(r.budget_amount),
 });
@@ -57,6 +64,8 @@ const toProject = (r: DbProject): Project => ({
   teamId: r.team_id ?? undefined,
   name: r.name,
   color: r.color,
+  initialHours: num(r.initial_hours),
+  plannedHours: num(r.planned_hours),
 });
 const toMilestone = (r: DbMilestone): Milestone => ({
   id: r.id,
@@ -108,23 +117,32 @@ type Actions = {
   setYear: (year: number) => void;
 
   addWorker: (w: Omit<Worker, "id">) => Promise<void>;
-  updateWorker: (id: string, patch: Partial<Omit<Worker, "id">>) => Promise<void>;
+  updateWorker: (
+    id: string,
+    patch: Partial<Omit<Worker, "id">>
+  ) => Promise<void>;
   removeWorker: (id: string) => Promise<void>;
 
   addTeam: (t: Omit<Team, "id">) => Promise<void>;
   updateTeam: (id: string, patch: Partial<Omit<Team, "id">>) => Promise<void>;
   removeTeam: (id: string) => Promise<void>;
 
-  addClient: (c: Omit<Client, "id">) => Promise<void>;
-  updateClient: (id: string, patch: Partial<Omit<Client, "id">>) => Promise<void>;
+  addClient: (c: Omit<Client, "id">) => Promise<string | undefined>;
+  updateClient: (
+    id: string,
+    patch: Partial<Omit<Client, "id">>
+  ) => Promise<void>;
   removeClient: (id: string) => Promise<void>;
 
-  addOrder: (o: Omit<Order, "id">) => Promise<void>;
+  addOrder: (o: Omit<Order, "id">) => Promise<string | undefined>;
   updateOrder: (id: string, patch: Partial<Omit<Order, "id">>) => Promise<void>;
   removeOrder: (id: string) => Promise<void>;
 
-  addProject: (p: Omit<Project, "id">) => Promise<void>;
-  updateProject: (id: string, patch: Partial<Omit<Project, "id">>) => Promise<void>;
+  addProject: (p: Omit<Project, "id">) => Promise<string | undefined>;
+  updateProject: (
+    id: string,
+    patch: Partial<Omit<Project, "id">>
+  ) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
 
   addAssignment: (workerId: string, projectId: string) => Promise<void>;
@@ -142,8 +160,21 @@ type Actions = {
 function fail(set: (p: Partial<State>) => void, e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
   set({ status: "error", error: msg });
-  // eslint-disable-next-line no-console
+  notify.error(`データ操作に失敗しました: ${msg}`);
   console.error("[store]", msg);
+}
+
+/**
+ * 入力をスキーマで検証する。失敗時はトーストで通知して null を返す。
+ * ストアの各 add/update アクションの先頭で使う。
+ */
+function check<T>(schema: z.ZodType<T>, value: unknown): T | null {
+  const result = validate(schema, value);
+  if (!result.ok) {
+    notify.error(result.message);
+    return null;
+  }
+  return result.data;
 }
 
 export const useStore = create<State & Actions>()((set, get) => ({
@@ -190,8 +221,15 @@ export const useStore = create<State & Actions>()((set, get) => ({
         supabase.from("entries").select("*"),
       ]);
       for (const r of [
-        teamRes, workerRes, clientRes, orderRes, projectRes,
-        milestoneRes, assignmentRes, achievementRes, entryRes,
+        teamRes,
+        workerRes,
+        clientRes,
+        orderRes,
+        projectRes,
+        milestoneRes,
+        assignmentRes,
+        achievementRes,
+        entryRes,
       ]) {
         if (r.error) throw r.error;
       }
@@ -203,7 +241,9 @@ export const useStore = create<State & Actions>()((set, get) => ({
         projects: (projectRes.data as DbProject[]).map(toProject),
         milestones: (milestoneRes.data as DbMilestone[]).map(toMilestone),
         assignments: (assignmentRes.data as DbAssignment[]).map(toAssignment),
-        achievements: (achievementRes.data as DbAchievement[]).map(toAchievement),
+        achievements: (achievementRes.data as DbAchievement[]).map(
+          toAchievement
+        ),
         entries: (entryRes.data as DbEntry[]).map(toEntry),
         status: "ready",
         error: null,
@@ -219,10 +259,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Workers ----
   addWorker: async (w) => {
     if (!supabase) return;
+    const input = check(workerInputSchema, w);
+    if (!input) return;
     try {
       const { data, error } = await supabase
         .from("workers")
-        .insert({ name: w.name, monthly_capacity_hours: w.monthlyCapacityHours })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
@@ -233,13 +275,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateWorker: async (id, patch) => {
     if (!supabase) return;
+    if (!check(workerInputSchema.partial(), patch)) return;
     const prev = get().workers;
     set({ workers: prev.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
     try {
       const db: Record<string, unknown> = {};
       if (patch.name !== undefined) db.name = patch.name;
-      if (patch.monthlyCapacityHours !== undefined)
-        db.monthly_capacity_hours = patch.monthlyCapacityHours;
       const { error } = await supabase.from("workers").update(db).eq("id", id);
       if (error) throw error;
     } catch (e) {
@@ -265,10 +306,12 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Teams ----
   addTeam: async (t) => {
     if (!supabase) return;
+    const input = check(teamInputSchema, t);
+    if (!input) return;
     try {
       const { data, error } = await supabase
         .from("teams")
-        .insert({ name: t.name })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
@@ -279,6 +322,7 @@ export const useStore = create<State & Actions>()((set, get) => ({
   },
   updateTeam: async (id, patch) => {
     if (!supabase) return;
+    if (!check(teamInputSchema.partial(), patch)) return;
     const prev = get().teams;
     set({ teams: prev.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
     try {
@@ -310,21 +354,27 @@ export const useStore = create<State & Actions>()((set, get) => ({
 
   // ---- Clients ----
   addClient: async (c) => {
-    if (!supabase) return;
+    if (!supabase) return undefined;
+    const input = check(clientInputSchema, c);
+    if (!input) return undefined;
     try {
       const { data, error } = await supabase
         .from("clients")
-        .insert({ name: c.name })
+        .insert({ name: input.name })
         .select()
         .single();
       if (error) throw error;
-      set((s) => ({ clients: [...s.clients, toClient(data as DbClient)] }));
+      const created = toClient(data as DbClient);
+      set((s) => ({ clients: [...s.clients, created] }));
+      return created.id;
     } catch (e) {
       fail(set, e);
+      return undefined;
     }
   },
   updateClient: async (id, patch) => {
     if (!supabase) return;
+    if (!check(clientInputSchema.partial(), patch)) return;
     const prev = get().clients;
     set({ clients: prev.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
     try {
@@ -356,38 +406,49 @@ export const useStore = create<State & Actions>()((set, get) => ({
 
   // ---- Orders ----
   addOrder: async (o) => {
-    if (!supabase) return;
+    if (!supabase) return undefined;
+    const input = check(orderInputSchema, o);
+    if (!input) return undefined;
     try {
       const { data, error } = await supabase
         .from("orders")
         .insert({
-          client_id: o.clientId ?? null,
-          name: o.name,
-          fiscal_year: o.fiscalYear ?? null,
-          owner_worker_id: o.ownerWorkerId ?? null,
-          planned_hours: o.plannedHours ?? 0,
-          budget_amount: o.budgetAmount ?? null,
+          client_id: input.clientId ?? null,
+          name: input.name,
+          fiscal_year: input.fiscalYear ?? null,
+          owner_worker_id: input.ownerWorkerId ?? null,
+          initial_hours: input.initialHours ?? 0,
+          planned_hours: input.plannedHours ?? 0,
+          budget_amount: input.budgetAmount ?? null,
         })
         .select()
         .single();
       if (error) throw error;
-      set((s) => ({ orders: [...s.orders, toOrder(data as DbOrder)] }));
+      const created = toOrder(data as DbOrder);
+      set((s) => ({ orders: [...s.orders, created] }));
+      return created.id;
     } catch (e) {
       fail(set, e);
+      return undefined;
     }
   },
   updateOrder: async (id, patch) => {
     if (!supabase) return;
+    if (!check(orderInputSchema.partial(), patch)) return;
     const prev = get().orders;
     set({ orders: prev.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
     try {
       const db: Record<string, unknown> = {};
       if (patch.clientId !== undefined) db.client_id = patch.clientId ?? null;
       if (patch.name !== undefined) db.name = patch.name;
-      if (patch.fiscalYear !== undefined) db.fiscal_year = patch.fiscalYear ?? null;
+      if (patch.fiscalYear !== undefined)
+        db.fiscal_year = patch.fiscalYear ?? null;
       if (patch.ownerWorkerId !== undefined)
         db.owner_worker_id = patch.ownerWorkerId ?? null;
-      if (patch.plannedHours !== undefined) db.planned_hours = patch.plannedHours;
+      if (patch.initialHours !== undefined)
+        db.initial_hours = patch.initialHours;
+      if (patch.plannedHours !== undefined)
+        db.planned_hours = patch.plannedHours;
       if (patch.budgetAmount !== undefined)
         db.budget_amount = patch.budgetAmount ?? null;
       const { error } = await supabase.from("orders").update(db).eq("id", id);
@@ -423,27 +484,36 @@ export const useStore = create<State & Actions>()((set, get) => ({
 
   // ---- Projects ----
   addProject: async (p) => {
-    if (!supabase) return;
+    if (!supabase) return undefined;
+    const input = check(projectInputSchema, p);
+    if (!input) return undefined;
     try {
-      const color = p.color || PALETTE[get().projects.length % PALETTE.length];
+      const color =
+        input.color || PALETTE[get().projects.length % PALETTE.length];
       const { data, error } = await supabase
         .from("projects")
         .insert({
-          order_id: p.orderId,
-          team_id: p.teamId ?? null,
-          name: p.name,
+          order_id: input.orderId,
+          team_id: input.teamId ?? null,
+          name: input.name,
           color,
+          initial_hours: input.initialHours ?? 0,
+          planned_hours: input.plannedHours ?? 0,
         })
         .select()
         .single();
       if (error) throw error;
-      set((s) => ({ projects: [...s.projects, toProject(data as DbProject)] }));
+      const created = toProject(data as DbProject);
+      set((s) => ({ projects: [...s.projects, created] }));
+      return created.id;
     } catch (e) {
       fail(set, e);
+      return undefined;
     }
   },
   updateProject: async (id, patch) => {
     if (!supabase) return;
+    if (!check(projectInputSchema.partial(), patch)) return;
     const prev = get().projects;
     set({ projects: prev.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
     try {
@@ -452,6 +522,10 @@ export const useStore = create<State & Actions>()((set, get) => ({
       if (patch.teamId !== undefined) db.team_id = patch.teamId ?? null;
       if (patch.name !== undefined) db.name = patch.name;
       if (patch.color !== undefined) db.color = patch.color;
+      if (patch.initialHours !== undefined)
+        db.initial_hours = patch.initialHours;
+      if (patch.plannedHours !== undefined)
+        db.planned_hours = patch.plannedHours;
       const { error } = await supabase.from("projects").update(db).eq("id", id);
       if (error) throw error;
     } catch (e) {
@@ -501,7 +575,10 @@ export const useStore = create<State & Actions>()((set, get) => ({
   removeAssignment: async (id) => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.from("assignments").delete().eq("id", id);
+      const { error } = await supabase
+        .from("assignments")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
       set((s) => ({ assignments: s.assignments.filter((a) => a.id !== id) }));
     } catch (e) {
@@ -512,6 +589,8 @@ export const useStore = create<State & Actions>()((set, get) => ({
   // ---- Entries ----
   setHours: async ({ workerId, projectId, year, month, hours }) => {
     if (!supabase) return;
+    if (!check(entryInputSchema, { workerId, projectId, year, month, hours }))
+      return;
     const prev = get().entries;
     // 楽観的更新
     const idx = prev.findIndex(

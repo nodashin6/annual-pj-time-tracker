@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 import { useStore } from "@/lib/store";
+import { envIssues } from "@/lib/supabase";
 
 /**
  * Supabase からの初期ロードを担うゲート。
+ * - 環境変数不正: 形式エラーバナー
  * - 未設定: 設定手順バナー
  * - 読み込み中: プレースホルダ
  * - エラー: エラーバナー
@@ -19,8 +21,12 @@ export function DataGate({ children }: { children: React.ReactNode }) {
     if (status === "idle") void load();
   }, [status, load]);
 
+  if (envIssues.length > 0) {
+    return <EnvErrorNotice issues={envIssues} />;
+  }
+
   if (status === "idle" || status === "loading") {
-    return <div className="py-20 text-center text-slate-400">読み込み中…</div>;
+    return <LoadingSkeleton />;
   }
 
   if (status === "unconfigured") {
@@ -39,6 +45,48 @@ export function DataGate({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LoadingSkeleton() {
+  return (
+    <div
+      className="animate-pulse space-y-6"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div className="h-7 w-48 rounded bg-slate-200" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl bg-slate-200" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="h-64 rounded-xl bg-slate-200" />
+        <div className="h-64 rounded-xl bg-slate-200" />
+      </div>
+      <span className="sr-only">読み込み中…</span>
+    </div>
+  );
+}
+
+function EnvErrorNotice({ issues }: { issues: string[] }) {
+  return (
+    <div className="mx-auto max-w-2xl rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">
+      <h2 className="mb-2 text-base font-bold">
+        環境変数の設定に問題があります
+      </h2>
+      <p className="mb-3">
+        Supabase の接続情報が不正な形式です。
+        <code className="rounded bg-white px-1">.env.local</code>{" "}
+        を確認してください。
+      </p>
+      <ul className="list-disc space-y-1 pl-5">
+        {issues.map((issue) => (
+          <li key={issue}>{issue}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function UnconfiguredNotice() {
   return (
     <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
@@ -53,7 +101,8 @@ function UnconfiguredNotice() {
           を実行（テーブル作成＋サンプル投入）。
         </li>
         <li>
-          プロジェクトルートに <code className="rounded bg-white px-1">.env.local</code>{" "}
+          プロジェクトルートに{" "}
+          <code className="rounded bg-white px-1">.env.local</code>{" "}
           を作成し、次を設定：
           <pre className="mt-1 overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100">{`NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>`}</pre>

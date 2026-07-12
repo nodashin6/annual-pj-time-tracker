@@ -1,39 +1,36 @@
 # 年間稼働トラッカー (annual-pj-time-tracker)
 
-プロジェクトの**工数・稼働率・キャパシティ**を、**月次／年次**で集計・可視化する稼働管理アプリです。
+顧客・受注・プロジェクト単位で**工数**を月次／年次に集計・可視化する稼働管理アプリです。
 
-チームの年間稼働を俯瞰し、「誰がどのプロジェクトにどれだけ入っているか」「稼働率は適正か（過負荷／空き）」を素早く把握することを目的としています。
+「どの受注にどれだけ工数が投下され、予定に対してどれだけ消化したか」「誰がどのプロジェクトに入っているか」を素早く把握することを目的としています。
 
 ## 主な機能
 
-- **月次・年次の集計** — プロジェクト別／メンバー別に工数を自動集計
-- **稼働率・キャパ管理** — メンバーごとの月あたりキャパを分母に稼働率を算出（過負荷/適正/空きを色分け）
-- **グラフ可視化**
-  - 月次工数の積み上げ棒グラフ（プロジェクト別）
-  - 月次稼働率の折れ線（メンバー別・100%基準線つき）
-  - 年間プロジェクト構成比の円グラフ
-- **工数入力** — メンバー×プロジェクトのマトリクスで月次入力
+- **ダッシュボード** — 受注別の工数（当初 / 予定 / 実績 / 消化率）とワーカー別投下工数を集計
+- **グラフ可視化** — 月次工数の積み上げ棒グラフ（プロジェクト別）、年間構成比の円グラフ
+- **マスタ管理** — 顧客 / 受注 / プロジェクト / ワーカー / チームの CRUD
+- **工数入力** — ワーカー別ルートで、割り当てられたプロジェクトの 12 か月分を入力
 - **年切り替え** — 複数年のデータを保持し、対象年を切り替えて表示
 
 ## 技術スタック
 
-- [Next.js 15](https://nextjs.org/)（App Router） + TypeScript
+- [Next.js 15](https://nextjs.org/)（App Router） + TypeScript（strict）
 - [Tailwind CSS 4](https://tailwindcss.com/)
 - [Recharts](https://recharts.org/) によるグラフ描画
 - [Zustand](https://github.com/pmndrs/zustand) でクライアント状態を管理
-- **バックエンド: [Supabase](https://supabase.com/)（PostgreSQL）** — メンバー / プロジェクト / 工数を永続化
+- [Zod](https://zod.dev/) による入力・環境変数の検証
+- **バックエンド: [Supabase](https://supabase.com/)（PostgreSQL）**
+- テスト: [Vitest](https://vitest.dev/) / Lint: ESLint 9 / Format: Prettier
 
 ## セットアップ
 
 ### 1. Supabase を用意
 
 1. [Supabase](https://supabase.com/) でプロジェクトを作成。
-2. ダッシュボードの **SQL Editor** で [`supabase/schema.sql`](supabase/schema.sql) を実行（テーブル作成＋サンプルデータ投入）。
+2. **SQL Editor** で [`supabase/schema.sql`](supabase/schema.sql) を実行（テーブル作成＋サンプル投入）。
 3. **Project Settings > API** から `Project URL` と `anon public` キーを取得。
 
 ### 2. 環境変数
-
-`.env.local.example` を `.env.local` にコピーし、値を設定します。
 
 ```bash
 cp .env.local.example .env.local
@@ -44,6 +41,8 @@ NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 ```
 
+環境変数の形式が不正な場合は起動時に UI で通知されます。未設定の場合は設定手順が表示されます（デモモード）。
+
 ### 3. 起動
 
 ```bash
@@ -51,30 +50,45 @@ npm install
 npm run dev
 ```
 
-http://localhost:3000 を開きます。環境変数が未設定の場合は、画面に設定手順が表示されます。
+http://localhost:3000 を開きます。
 
-### ビルド
+## 開発コマンド
 
-```bash
-npm run build
-npm start
-```
-
-## 使い方
-
-1. **メンバー・PJ設定** タブで、メンバー（＋月あたりキャパ）とプロジェクトを登録します。
-2. **工数入力** タブで、月を選びメンバー×プロジェクトの工数（時間）を入力します。
-3. **ダッシュボード** タブで、月次・年次の集計とグラフ、メンバー別稼働率を確認します。
+| コマンド                  | 内容                                         |
+| ------------------------- | -------------------------------------------- |
+| `npm run dev`             | 開発サーバー                                 |
+| `npm run build` / `start` | 本番ビルド / 起動                            |
+| `npm run lint`            | ESLint                                       |
+| `npm run format`          | Prettier で整形（`format:check` で検査のみ） |
+| `npm run typecheck`       | 型チェック（`tsc --noEmit`）                 |
+| `npm run test`            | Vitest（`test:watch` / `test:coverage`）     |
+| `npm run verify`          | typecheck + lint + test を一括実行           |
 
 ## データモデル
 
-- `members` — メンバー（`monthly_capacity_hours` = 月あたり標準稼働時間）
-- `projects` — プロジェクト（表示色・顧客名を保持）
-- `entries` — 工数エントリ（メンバー × プロジェクト × 年月 の時間、この4項目で一意）
+```
+clients ─1:N─ orders ─1:N─ projects ─(N:1)─ teams
+                               ├─1:N─ milestones
+                               └─N:M─ workers  (assignments)
+entries: worker × project × 年月（4項目で一意）
+```
 
-稼働率 = 投下工数 ÷ キャパ（メンバー月次 or 年間合計）。
+- **client（顧客）** が **order（受注）** を出し、受注は複数の **project** に細分化される。
+- 各 project は1つの **team** が担当し、**worker** は `assignments` で project へアサインされる。
+- **entry（工数）** は worker × project × 年月で記録し、月次/年次に集計する。
 
-> RLS は動作確認しやすいよう anon の読み書きを許可しています。実運用ではユーザー認証（`auth.uid()` ベースのポリシー）に置き換えてください。
+詳細な設計は [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) を参照してください。
+
+## セキュリティ / RLS
+
+- RLS はデモ用に anon の読み書きを許可しています。
+- 認証を導入する場合は [`supabase/policies-authenticated.sql`](supabase/policies-authenticated.sql) を実行し、「認証済みユーザーのみ」に切り替えてください。
+- サービスロールキーはコミットしないでください（anon key はクライアント露出前提の公開値）。
+
+## CI / 品質
+
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml): format:check → lint → typecheck → test → build を PR/push で実行。
+- [`.githooks/pre-push`](.githooks/pre-push): `main` への直 push をブロック（PR 経由を強制）。有効化は `git config core.hooksPath .githooks`。
 
 ## ライセンス
 

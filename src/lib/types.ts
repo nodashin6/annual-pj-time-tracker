@@ -3,12 +3,13 @@ export type Team = {
   name: string;
 };
 
-/** ワーカー（作業者）。チームには属さず、worker_projects でプロジェクトへ直接アサインする。 */
+/**
+ * ワーカー（作業者）。assignments でプロジェクトへ直接アサインする。
+ * 稼働キャパは持たない（本システムはプロジェクト工数の充足が主眼）。
+ */
 export type Worker = {
   id: string;
   name: string;
-  /** 1か月あたりの標準稼働可能時間（キャパシティ, 時間） */
-  monthlyCapacityHours: number;
 };
 
 export type Client = {
@@ -28,7 +29,9 @@ export type Order = {
   fiscalYear?: number;
   /** 社内担当ワーカー */
   ownerWorkerId?: string;
-  /** 想定工数（時間） */
+  /** 当初工数（受注時点の初期見積, 時間） */
+  initialHours: number;
+  /** 予定工数（現時点の予定, 時間） */
   plannedHours: number;
   /** 予算（金額） */
   budgetAmount?: number;
@@ -42,6 +45,10 @@ export type Project = {
   name: string;
   /** グラフ表示用のカラー（HEX） */
   color: string;
+  /** 当初工数（プロジェクト固有の初期見積, 時間）。受注や他PJとは独立。 */
+  initialHours: number;
+  /** 予定工数（プロジェクト固有の現時点の予定, 時間） */
+  plannedHours: number;
 };
 
 /** マイルストーン（プロジェクトの区間）。日付で区間を指定する（メンバー非依存）。 */
@@ -95,6 +102,16 @@ export type Entry = {
 export const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 export const MONTH_LABELS = [
-  "1月", "2月", "3月", "4月", "5月", "6月",
-  "7月", "8月", "9月", "10月", "11月", "12月",
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
 ] as const;
