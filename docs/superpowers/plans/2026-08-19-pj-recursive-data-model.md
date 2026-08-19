@@ -3393,7 +3393,7 @@ pj (再帰ツリー)
 
 3. **「コア層は工数の行が1件もない状態で完結して使える」を不変条件として明記する**。予定工数は `plannedHoursOf()` で task の期間から導出し、手入力しないことも書く
 4. 「拡張ポイント」節を書き換える。`assignments` / `achievements` への言及を削除し、代わりに以下を挙げる — `path text` によるSQL側サブツリー集計、`plannedHoursOf()` の営業時間換算への差し替え、issue の複数担当
-5. 設計判断の根拠として [`docs/superpowers/specs/2026-08-19-pj-recursive-data-model-design.md`](specs/2026-08-19-pj-recursive-data-model-design.md) へのリンクを張る
+5. 設計判断の根拠として [`docs/superpowers/specs/2026-08-19-pj-recursive-data-model-design.md`](superpowers/specs/2026-08-19-pj-recursive-data-model-design.md) へのリンクを張る
 
 - [ ] **Step 6: 旧モデル語の残骸を検索して潰す**
 

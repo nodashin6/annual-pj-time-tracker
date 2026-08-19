@@ -2,7 +2,7 @@
 
 年間稼働トラッカーの構成と設計方針をまとめます。
 
-設計判断の根拠は [`docs/superpowers/specs/2026-08-19-pj-recursive-data-model-design.md`](specs/2026-08-19-pj-recursive-data-model-design.md) を参照してください。
+設計判断の根拠は [`docs/superpowers/specs/2026-08-19-pj-recursive-data-model-design.md`](superpowers/specs/2026-08-19-pj-recursive-data-model-design.md) を参照してください。
 
 ## レイヤ構成
 
@@ -13,6 +13,8 @@ UI (app/**, components/**)              ← React / Next.js App Router
        ├─ core.ts                       ← pj / tracker / issue / task の CRUD スライス
        ├─ actuals.ts                    ← task_entries（実績）の CRUD スライス
        ├─ mappers.ts                    ← DB行 ⇄ アプリ内型の変換
+       ├─ crud.ts（補助）               ← 各スライス共通の `fail` / `check` / `patchOf`
+       ├─ types.ts（補助）              ← スライス非依存の共有型 `Status` / `Shared`
        ├─ 検証 (lib/schemas.ts)         ← Zod。書き込み前に入力を検証
        ├─ 通知 (lib/notify.ts)          ← トースト（成功/失敗）
        ├─ 集計 (lib/aggregate/)         ← 純関数。テスト対象
