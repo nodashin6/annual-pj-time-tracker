@@ -45,20 +45,20 @@
 
 前提メモの未決事項に対する結論。
 
-| 論点 | 結論 | 理由 |
-|---|---|---|
-| **b. tracker は1個か複数か** | `mode` 列を廃止し、tracker は葉pjに1個固定（`pj_id` を主キー） | 「ガントで見るかバックログで見るか」は表示の話であって DB 制約ではない。mode を構造にした結果が b という問いだった。廃止すれば tasks と issues が同じ tracker に共存でき、b-2 が欲しがった分解も `tasks.issue_id` で表現できる |
-| **a. 実績の紐づけ先** | `task_entries.task_id` | 工数が task 依存の拡張層になったため |
-| **c. 予定工数** | task の `end_at - start_at` から導出。手入力を廃止 | カレンダーの枠は長さを持つ。手入力と併存させると二重管理になる |
-| 稼働可能工数（旧 `achievements`） | **廃止** | タスク作成の前提として上限工数を要求する形になり、依存が逆立ちする |
-| 受注（契約単位）の識別 | `fiscal_year` / `budget_amount` の有無で判定 | 列を増やさない。散らばり防止は §5-3 の述語1本への封じ込めで担保する |
-| issue の担当者 | 任意1人（nullable） | GitHub issue と同じく宙ぶらりんを許す |
-| issue の親子 | 同一 tracker 内に限定（トリガ） | 前提メモの推奨どおり |
-| task の担当者 | 必須1名。`task_assignees` への分離はしない | カレンダーなら2人の作業は2件のイベントであって、1件に2人ではない |
-| member の継承 | 有効メンバー = 自ノード + 全祖先の和集合 | 前提メモの推奨どおり。ただし DB トリガにはしない（§5-3） |
-| `milestones` | tracker の `start_date` / `end_date` に吸収して廃止 | 現行 UI に書き込み口が存在せず、実質未使用 |
-| `path ltree` | **不採用** | §4-3 |
-| 既存データ | 移行しない。drop & recreate | サンプルデータのみで保全対象なし |
+| 論点                              | 結論                                                           | 理由                                                                                                                                                                                                                           |
+| --------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **b. tracker は1個か複数か**      | `mode` 列を廃止し、tracker は葉pjに1個固定（`pj_id` を主キー） | 「ガントで見るかバックログで見るか」は表示の話であって DB 制約ではない。mode を構造にした結果が b という問いだった。廃止すれば tasks と issues が同じ tracker に共存でき、b-2 が欲しがった分解も `tasks.issue_id` で表現できる |
+| **a. 実績の紐づけ先**             | `task_entries.task_id`                                         | 工数が task 依存の拡張層になったため                                                                                                                                                                                           |
+| **c. 予定工数**                   | task の `end_at - start_at` から導出。手入力を廃止             | カレンダーの枠は長さを持つ。手入力と併存させると二重管理になる                                                                                                                                                                 |
+| 稼働可能工数（旧 `achievements`） | **廃止**                                                       | タスク作成の前提として上限工数を要求する形になり、依存が逆立ちする                                                                                                                                                             |
+| 受注（契約単位）の識別            | `fiscal_year` / `budget_amount` の有無で判定                   | 列を増やさない。散らばり防止は §5-3 の述語1本への封じ込めで担保する                                                                                                                                                            |
+| issue の担当者                    | 任意1人（nullable）                                            | GitHub issue と同じく宙ぶらりんを許す                                                                                                                                                                                          |
+| issue の親子                      | 同一 tracker 内に限定（トリガ）                                | 前提メモの推奨どおり                                                                                                                                                                                                           |
+| task の担当者                     | 必須1名。`task_assignees` への分離はしない                     | カレンダーなら2人の作業は2件のイベントであって、1件に2人ではない                                                                                                                                                               |
+| member の継承                     | 有効メンバー = 自ノード + 全祖先の和集合                       | 前提メモの推奨どおり。ただし DB トリガにはしない（§5-3）                                                                                                                                                                       |
+| `milestones`                      | tracker の `start_date` / `end_date` に吸収して廃止            | 現行 UI に書き込み口が存在せず、実質未使用                                                                                                                                                                                     |
+| `path ltree`                      | **不採用**                                                     | §4-3                                                                                                                                                                                                                           |
+| 既存データ                        | 移行しない。drop & recreate                                    | サンプルデータのみで保全対象なし                                                                                                                                                                                               |
 
 ---
 
@@ -144,11 +144,11 @@ create table task_entries (
 
 ### 4-4. トリガ（3本）
 
-| 名前 | 内容 |
-|---|---|
-| `pj_no_cycle` | `parent_id` 変更時に祖先を再帰CTEで辿り、自分が現れたら reject |
+| 名前                  | 内容                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pj_no_cycle`         | `parent_id` 変更時に祖先を再帰CTEで辿り、自分が現れたら reject                                               |
 | `pj_leaf_consistency` | 双方向チェック。tracker 挿入時「その pj に子がいたら reject」／pj の親設定時「親が tracker 持ちなら reject」 |
-| `issue_same_tracker` | issue の親子が tracker をまたぐのを reject |
+| `issue_same_tracker`  | issue の親子が tracker をまたぐのを reject                                                                   |
 
 ### 4-5. 廃止するテーブル（8）
 
@@ -253,8 +253,12 @@ export const isLeaf = (pjId: string, trackers: Tracker[]) =>
 
 /** 有効メンバー = 自ノード + 全祖先の和集合。 */
 export const effectiveMembers = (
-  pjId: string, pjs: Pj[], members: PjMember[]
-): string[] => { /* ... */ };
+  pjId: string,
+  pjs: Pj[],
+  members: PjMember[]
+): string[] => {
+  /* ... */
+};
 ```
 
 ```ts
@@ -268,27 +272,27 @@ export const plannedHoursOf = (t: Task) =>
 
 ### 5-4. 集計関数の対応
 
-| 現行 | 新 | 変更点 |
-|---|---|---|
-| `monthlyStackByProject` | `monthlyStackByLeaf` | task 経由で葉pjへ寄せて積み上げ |
-| `annualByProject` | `annualByLeaf` | 同上 |
-| `workerHours` | `workerHours` | `task.assigneeId` 経由 |
-| `orderProgress` | `contractProgress` | `isContractNode` で抽出。サブツリー配下 task の `plannedHoursOf` 合計 vs `task_entries` 合計 |
-| `orgTotals` | `orgTotals` | 予定の出所が受注手入力から task 積み上げへ |
-| `filterByYear` / `availableYears` | 据え置き | 年は `task_entries` と `tasks.startAt` の和集合から |
+| 現行                              | 新                   | 変更点                                                                                       |
+| --------------------------------- | -------------------- | -------------------------------------------------------------------------------------------- |
+| `monthlyStackByProject`           | `monthlyStackByLeaf` | task 経由で葉pjへ寄せて積み上げ                                                              |
+| `annualByProject`                 | `annualByLeaf`       | 同上                                                                                         |
+| `workerHours`                     | `workerHours`        | `task.assigneeId` 経由                                                                       |
+| `orderProgress`                   | `contractProgress`   | `isContractNode` で抽出。サブツリー配下 task の `plannedHoursOf` 合計 vs `task_entries` 合計 |
+| `orgTotals`                       | `orgTotals`          | 予定の出所が受注手入力から task 積み上げへ                                                   |
+| `filterByYear` / `availableYears` | 据え置き             | 年は `task_entries` と `tasks.startAt` の和集合から                                          |
 
 ---
 
 ## 6. 画面構成
 
-| 現行 | 新 | 備考 |
-|---|---|---|
-| `/` | `/` | 受注別 → 契約ノード別。予定の出所が変わる |
-| `/clients` `/clients/new` `/clients/[id]`<br>`/orders` `/orders/new` `/orders/[id]`<br>`/projects` `/projects/new` `/projects/[id]` | `/pj`<br>`/pj/[id]` | 同じものの階層違いなのでツリー1画面に統合。削除9・新設2 |
-| — | `/pj/[id]/issues` | 新設。階層バックログ（担当者・期日・status） |
-| — | `/pj/[id]/calendar` | 新設。task のカレンダー |
-| `/worker-entries`<br>`/worker-entries/[worker_id]` | `/actuals`<br>`/actuals/[worker_id]` | 作り替え（§6-1） |
-| `/master` | `/master` | teams を落として workers のみ |
+| 現行                                                                                                                                | 新                                   | 備考                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------- |
+| `/`                                                                                                                                 | `/`                                  | 受注別 → 契約ノード別。予定の出所が変わる               |
+| `/clients` `/clients/new` `/clients/[id]`<br>`/orders` `/orders/new` `/orders/[id]`<br>`/projects` `/projects/new` `/projects/[id]` | `/pj`<br>`/pj/[id]`                  | 同じものの階層違いなのでツリー1画面に統合。削除9・新設2 |
+| —                                                                                                                                   | `/pj/[id]/issues`                    | 新設。階層バックログ（担当者・期日・status）            |
+| —                                                                                                                                   | `/pj/[id]/calendar`                  | 新設。task のカレンダー                                 |
+| `/worker-entries`<br>`/worker-entries/[worker_id]`                                                                                  | `/actuals`<br>`/actuals/[worker_id]` | 作り替え（§6-1）                                        |
+| `/master`                                                                                                                           | `/master`                            | teams を落として workers のみ                           |
 
 `components/Charts.tsx` は `projects` → 葉pj への差し替えのみ。`components/Sidebar.tsx` のリンクは 6 → 5 本。
 

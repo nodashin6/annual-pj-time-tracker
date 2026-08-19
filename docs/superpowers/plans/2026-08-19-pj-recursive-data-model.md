@@ -29,10 +29,12 @@
 ### Task 1: SQL スキーマの全面書き直し
 
 **Files:**
+
 - Modify: `supabase/schema.sql`（全面書き直し）
 - Modify: `supabase/policies-authenticated.sql`（全面書き直し）
 
 **Interfaces:**
+
 - Consumes: なし
 - Produces: テーブル `workers` `pj` `pj_members` `tracker` `issues` `tasks` `task_entries`。列名は spec §4 のとおり。
 
@@ -398,14 +400,17 @@ git commit -m "feat(db): pj 再帰モデルへスキーマを全面刷新"
 ### Task 2: 型定義と Zod スキーマの差し替え
 
 **Files:**
+
 - Modify: `src/lib/types.ts`（全面書き直し）
 - Modify: `src/lib/supabase.ts:22-88`（`Db*` 型ブロックのみ差し替え。上部の client 生成は触らない）
 - Modify: `src/lib/schemas.ts`（全面書き直し）
 - Test: `src/lib/schemas.test.ts`（全面書き直し）
 
 **Interfaces:**
+
 - Consumes: なし
 - Produces:
+
   - `types.ts`: `Worker` `Pj` `PjMember` `Tracker` `Issue` `Task` `TaskEntry` `MONTHS` `MONTH_LABELS`
   - `supabase.ts`: `DbWorker` `DbPj` `DbPjMember` `DbTracker` `DbIssue` `DbTask` `DbTaskEntry`
   - `schemas.ts`: `pjInputSchema` `pjPatchSchema` `trackerInputSchema` `trackerPatchSchema` `issueInputSchema` `issuePatchSchema` `taskInputSchema` `taskPatchSchema` `taskEntryInputSchema` `workerInputSchema` `validate` `ValidationResult`
@@ -695,9 +700,9 @@ describe("taskInputSchema", () => {
   });
 
   it("担当者なしを弾く（必須1名）", () => {
-    expect(validate(taskInputSchema, { ...base, assigneeId: undefined }).ok).toBe(
-      false
-    );
+    expect(
+      validate(taskInputSchema, { ...base, assigneeId: undefined }).ok
+    ).toBe(false);
   });
 
   it("開始 >= 終了 を弾く", () => {
@@ -802,7 +807,9 @@ const year = z
   .min(1970, "年度が範囲外です")
   .max(2999, "年度が範囲外です");
 
-const isoDate = z.string().regex(ISO_DATE, "日付は YYYY-MM-DD 形式で指定してください");
+const isoDate = z
+  .string()
+  .regex(ISO_DATE, "日付は YYYY-MM-DD 形式で指定してください");
 
 /** ISO8601 の日時。Date.parse できることまで見る。 */
 const isoDateTime = z
@@ -873,7 +880,11 @@ export const taskPatchSchema = taskInputBase.partial();
 export const taskEntryInputSchema = z.object({
   taskId: z.string().uuid(),
   year,
-  month: z.number().int().min(1, "月は1〜12で指定してください").max(12, "月は1〜12で指定してください"),
+  month: z
+    .number()
+    .int()
+    .min(1, "月は1〜12で指定してください")
+    .max(12, "月は1〜12で指定してください"),
   hours,
 });
 
@@ -910,10 +921,12 @@ git commit -m "feat(model): 型と Zod スキーマを pj 再帰モデルへ差�
 ### Task 3: `aggregate/tree.ts` — ツリー操作とコア層の述語
 
 **Files:**
+
 - Create: `src/lib/aggregate/tree.ts`
 - Test: `src/lib/aggregate/tree.test.ts`
 
 **Interfaces:**
+
 - Consumes: `types.ts` の `Pj` `PjMember` `Tracker`
 - Produces:
   - `isContractNode(pj: Pj): boolean`
@@ -1215,10 +1228,12 @@ git commit -m "feat(aggregate): pj ツリー操作と契約ノード/葉の述�
 ### Task 4: `aggregate/plan.ts` — 予定工数の導出
 
 **Files:**
+
 - Create: `src/lib/aggregate/plan.ts`
 - Test: `src/lib/aggregate/plan.test.ts`
 
 **Interfaces:**
+
 - Consumes: `types.ts` の `Task`
 - Produces:
   - `plannedHoursOf(task: Task): number`
@@ -1246,19 +1261,25 @@ const task = (startAt: string, endAt: string, id = "t"): Task => ({
 describe("plannedHoursOf", () => {
   it("同日内の枠の長さを時間で返す", () => {
     expect(
-      plannedHoursOf(task("2026-02-10T10:00:00+09:00", "2026-02-10T18:00:00+09:00"))
+      plannedHoursOf(
+        task("2026-02-10T10:00:00+09:00", "2026-02-10T18:00:00+09:00")
+      )
     ).toBe(8);
   });
 
   it("分単位の端数を保つ", () => {
     expect(
-      plannedHoursOf(task("2026-02-10T10:00:00+09:00", "2026-02-10T10:30:00+09:00"))
+      plannedHoursOf(
+        task("2026-02-10T10:00:00+09:00", "2026-02-10T10:30:00+09:00")
+      )
     ).toBe(0.5);
   });
 
   it("日をまたぐ枠は経過時間そのままを返す（夜間も数える）", () => {
     expect(
-      plannedHoursOf(task("2026-02-10T22:00:00+09:00", "2026-02-11T02:00:00+09:00"))
+      plannedHoursOf(
+        task("2026-02-10T22:00:00+09:00", "2026-02-11T02:00:00+09:00")
+      )
     ).toBe(4);
   });
 
@@ -1362,13 +1383,16 @@ git commit -m "feat(aggregate): task の期間から予定工数を導出する�
 ### Task 5: `aggregate/progress.ts` — 実績集計（拡張層）
 
 **Files:**
+
 - Create: `src/lib/aggregate/progress.ts`
 - Test: `src/lib/aggregate/progress.test.ts`
 - Delete: `src/lib/aggregate.ts`, `src/lib/aggregate.test.ts`
 
 **Interfaces:**
+
 - Consumes: `tree.ts` の `descendantIds` `leafPjs` `contractNodes`、`plan.ts` の `sumPlannedHours` `tasksInYear`
 - Produces:
+
   - `filterByYear(entries: TaskEntry[], year: number): TaskEntry[]`
   - `availableYears(entries: TaskEntry[], tasks: Task[], current: number): number[]`
   - `monthlyStackByLeaf(entries, tasks, leaves, year): Array<Record<string, number | string>>`
@@ -1396,7 +1420,13 @@ import {
 //  受注(契約) ─ サブ ─ 葉1
 //                └──── 葉2
 const PJS: Pj[] = [
-  { id: "受注", name: "受注", color: "#000", fiscalYear: 2026, budgetAmount: 100 },
+  {
+    id: "受注",
+    name: "受注",
+    color: "#000",
+    fiscalYear: 2026,
+    budgetAmount: 100,
+  },
   { id: "サブ", parentId: "受注", name: "サブ", color: "#000" },
   { id: "葉1", parentId: "サブ", name: "葉1", color: "#111" },
   { id: "葉2", parentId: "サブ", name: "葉2", color: "#222" },
@@ -1726,9 +1756,11 @@ git commit -m "feat(aggregate): 実績集計を拡張層として再実装し旧
 ### Task 6: 依存の向きをテストで固定する
 
 **Files:**
+
 - Create: `src/lib/aggregate/layering.test.ts`
 
 **Interfaces:**
+
 - Consumes: Task 3〜5 で作った `tree.ts` `plan.ts` `progress.ts` のソース
 - Produces: なし（回帰防止のみ）
 
@@ -1809,6 +1841,7 @@ git commit -m "test(aggregate): コア層が実績層に依存しないことを
 ### Task 7: ストアの再構成
 
 **Files:**
+
 - Create: `src/lib/store/types.ts`
 - Create: `src/lib/store/mappers.ts`
 - Create: `src/lib/store/mappers.test.ts`
@@ -1819,6 +1852,7 @@ git commit -m "test(aggregate): コア層が実績層に依存しないことを
 - Delete: `src/lib/store.ts`
 
 **Interfaces:**
+
 - Consumes: `types.ts`、`supabase.ts` の `Db*`、`schemas.ts`
 - Produces:
   - `store/types.ts`: `Status` `Shared`
@@ -1887,7 +1921,9 @@ describe("toPj", () => {
 
 describe("toTracker", () => {
   it("日付 null を undefined にする", () => {
-    expect(toTracker({ pj_id: "p1", start_date: null, end_date: null })).toEqual({
+    expect(
+      toTracker({ pj_id: "p1", start_date: null, end_date: null })
+    ).toEqual({
       pjId: "p1",
       startDate: undefined,
       endDate: undefined,
@@ -2159,7 +2195,14 @@ import {
   taskPatchSchema,
 } from "../schemas";
 import type { PjInput, TrackerInput, IssueInput, TaskInput } from "../schemas";
-import { toWorker, toPj, toPjMember, toTracker, toIssue, toTask } from "./mappers";
+import {
+  toWorker,
+  toPj,
+  toPjMember,
+  toTracker,
+  toIssue,
+  toTask,
+} from "./mappers";
 import { fail, check, patchOf } from "./crud";
 import { PALETTE } from "../ui";
 import type { Shared } from "./types";
@@ -2301,15 +2344,24 @@ export const createCoreSlice: StateCreator<
         .from("pj")
         .update(
           patchOf({
-            parent_id: patch.parentId === undefined ? undefined : (patch.parentId ?? null),
+            parent_id:
+              patch.parentId === undefined
+                ? undefined
+                : (patch.parentId ?? null),
             name: patch.name,
             color: patch.color || undefined,
             owner_worker_id:
-              patch.ownerWorkerId === undefined ? undefined : (patch.ownerWorkerId ?? null),
+              patch.ownerWorkerId === undefined
+                ? undefined
+                : (patch.ownerWorkerId ?? null),
             fiscal_year:
-              patch.fiscalYear === undefined ? undefined : (patch.fiscalYear ?? null),
+              patch.fiscalYear === undefined
+                ? undefined
+                : (patch.fiscalYear ?? null),
             budget_amount:
-              patch.budgetAmount === undefined ? undefined : (patch.budgetAmount ?? null),
+              patch.budgetAmount === undefined
+                ? undefined
+                : (patch.budgetAmount ?? null),
           })
         )
         .eq("id", id);
@@ -2418,7 +2470,9 @@ export const createCoreSlice: StateCreator<
         .update(
           patchOf({
             start_date:
-              patch.startDate === undefined ? undefined : (patch.startDate ?? null),
+              patch.startDate === undefined
+                ? undefined
+                : (patch.startDate ?? null),
             end_date:
               patch.endDate === undefined ? undefined : (patch.endDate ?? null),
           })
@@ -2433,7 +2487,10 @@ export const createCoreSlice: StateCreator<
   detachTracker: async (pjId) => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.from("tracker").delete().eq("pj_id", pjId);
+      const { error } = await supabase
+        .from("tracker")
+        .delete()
+        .eq("pj_id", pjId);
       if (error) throw error;
       const goneTasks = new Set(
         get()
@@ -2488,11 +2545,17 @@ export const createCoreSlice: StateCreator<
         .from("issues")
         .update(
           patchOf({
-            parent_id: patch.parentId === undefined ? undefined : (patch.parentId ?? null),
+            parent_id:
+              patch.parentId === undefined
+                ? undefined
+                : (patch.parentId ?? null),
             assignee_id:
-              patch.assigneeId === undefined ? undefined : (patch.assigneeId ?? null),
+              patch.assigneeId === undefined
+                ? undefined
+                : (patch.assigneeId ?? null),
             title: patch.title,
-            due_date: patch.dueDate === undefined ? undefined : (patch.dueDate ?? null),
+            due_date:
+              patch.dueDate === undefined ? undefined : (patch.dueDate ?? null),
             status: patch.status,
           })
         )
@@ -2566,7 +2629,8 @@ export const createCoreSlice: StateCreator<
         .from("tasks")
         .update(
           patchOf({
-            issue_id: patch.issueId === undefined ? undefined : (patch.issueId ?? null),
+            issue_id:
+              patch.issueId === undefined ? undefined : (patch.issueId ?? null),
             assignee_id: patch.assigneeId,
             title: patch.title,
             start_at: patch.startAt,
@@ -2679,7 +2743,9 @@ export const createActualsSlice: StateCreator<
       const saved = toTaskEntry(data as DbTaskEntry);
       set({
         taskEntries: get().taskEntries.map((e) =>
-          e.taskId === taskId && e.year === year && e.month === month ? saved : e
+          e.taskId === taskId && e.year === year && e.month === month
+            ? saved
+            : e
         ),
       });
     } catch (e) {
@@ -2742,16 +2808,23 @@ export const useStore = create<Store>()((set, get, api) => ({
     }
     set({ status: "loading" });
     try {
-      const [workerRes, pjRes, memberRes, trackerRes, issueRes, taskRes, entryRes] =
-        await Promise.all([
-          supabase.from("workers").select("*").order("created_at"),
-          supabase.from("pj").select("*").order("created_at"),
-          supabase.from("pj_members").select("*"),
-          supabase.from("tracker").select("*"),
-          supabase.from("issues").select("*").order("created_at"),
-          supabase.from("tasks").select("*").order("start_at"),
-          supabase.from("task_entries").select("*"),
-        ]);
+      const [
+        workerRes,
+        pjRes,
+        memberRes,
+        trackerRes,
+        issueRes,
+        taskRes,
+        entryRes,
+      ] = await Promise.all([
+        supabase.from("workers").select("*").order("created_at"),
+        supabase.from("pj").select("*").order("created_at"),
+        supabase.from("pj_members").select("*"),
+        supabase.from("tracker").select("*"),
+        supabase.from("issues").select("*").order("created_at"),
+        supabase.from("tasks").select("*").order("start_at"),
+        supabase.from("task_entries").select("*"),
+      ]);
       for (const r of [
         workerRes,
         pjRes,
@@ -2811,6 +2884,7 @@ git commit -m "refactor(store): コア層と実績層のスライスに分割し
 ### Task 8: 旧画面の撤去と `/pj` ツリー画面
 
 **Files:**
+
 - Delete: `src/app/clients/page.tsx`, `src/app/clients/new/page.tsx`, `src/app/clients/[id]/page.tsx`
 - Delete: `src/app/orders/page.tsx`, `src/app/orders/new/page.tsx`, `src/app/orders/[id]/page.tsx`
 - Delete: `src/app/projects/page.tsx`, `src/app/projects/new/page.tsx`, `src/app/projects/[id]/page.tsx`
@@ -2819,6 +2893,7 @@ git commit -m "refactor(store): コア層と実績層のスライスに分割し
 - Modify: `src/components/Sidebar.tsx:7-14`
 
 **Interfaces:**
+
 - Consumes: `useStore`（Task 7）、`aggregate/tree.ts` の `childrenOf` `isLeaf` `isContractNode` `breadcrumb` `effectiveMembers`
 - Produces: ルート `/pj` と `/pj/[id]`
 
@@ -3003,9 +3078,11 @@ git commit -m "feat(ui): 顧客/受注/PJ の3画面を pj ツリー1画面へ�
 ### Task 9: `/pj/[id]/issues` — バックログ画面
 
 **Files:**
+
 - Create: `src/app/pj/[id]/issues/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useStore` の `issues` `workers` `addIssue` `updateIssue` `removeIssue`、`aggregate/tree.ts` の `isLeaf` `breadcrumb`
 - Produces: ルート `/pj/[id]/issues`
 
@@ -3051,9 +3128,11 @@ git commit -m "feat(ui): 葉pj のバックログ画面を追加"
 ### Task 10: `/pj/[id]/calendar` — task 画面
 
 **Files:**
+
 - Create: `src/app/pj/[id]/calendar/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useStore` の `tasks` `issues` `workers` `pjMembers` `pjs` `year` `addTask` `updateTask` `removeTask`、`aggregate/tree.ts` の `isLeaf` `effectiveMembers`、`aggregate/plan.ts` の `plannedHoursOf` `sumPlannedHours` `tasksInYear`
 - Produces: ルート `/pj/[id]/calendar`
 
@@ -3103,12 +3182,14 @@ git commit -m "feat(ui): 葉pj のカレンダー(task)画面を追加"
 ### Task 11: `/actuals` — 実績入力画面の作り替え
 
 **Files:**
+
 - Delete: `src/app/worker-entries/page.tsx`, `src/app/worker-entries/[worker_id]/page.tsx`, `src/app/worker-entries/layout.tsx`
 - Create: `src/app/actuals/layout.tsx`
 - Create: `src/app/actuals/page.tsx`
 - Create: `src/app/actuals/[worker_id]/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useStore` の `workers` `tasks` `taskEntries` `pjs` `year` `setTaskHours`、`aggregate/plan.ts` の `plannedHoursOf`
 - Produces: ルート `/actuals` と `/actuals/[worker_id]`
 
@@ -3174,12 +3255,14 @@ git commit -m "feat(ui): 実績入力を葉pj/task の2階層グリッドへ作�
 ### Task 12: ダッシュボードと Charts の差し替え
 
 **Files:**
+
 - Modify: `src/app/page.tsx`（全面書き直し）
 - Modify: `src/components/Charts.tsx`
 - Modify: `src/components/YearSelector.tsx`
 - Modify: `src/app/master/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `aggregate/progress.ts` の `orgTotals` `monthlyStackByLeaf` `annualByLeaf` `contractProgress` `workerHours` `availableYears`、`aggregate/tree.ts` の `leafPjs`
 - Produces: なし（画面のみ）
 
@@ -3237,11 +3320,13 @@ git commit -m "feat(ui): ダッシュボードを契約ノード別集計へ差�
 ### Task 13: 全体 green 回復とドキュメント更新
 
 **Files:**
+
 - Modify: `docs/ARCHITECTURE.md`
 - Modify: `README.md`（データモデルの記述がある場合）
 - Modify: 型エラーの残る任意のファイル
 
 **Interfaces:**
+
 - Consumes: Task 1〜12 のすべて
 - Produces: `npm run verify` と `npm run build` が通る状態
 
