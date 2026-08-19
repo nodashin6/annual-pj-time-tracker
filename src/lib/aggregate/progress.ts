@@ -125,12 +125,18 @@ export function contractProgress(
   return contractNodes(pjs)
     .map((pj) => {
       const scope = new Set(descendantIds(pj.id, pjs));
+      // 予定: その年に開始する task のみ。
       const scoped = yTasks.filter((t) => scope.has(t.trackerPjId));
-      const taskIds = new Set(scoped.map((t) => t.id));
-      const actualHours = yEntries
-        .filter((e) => taskIds.has(e.taskId))
-        .reduce((a, e) => a + e.hours, 0);
       const plannedHours = sumPlannedHours(scoped);
+      // 実績: task の開始年に関係なく、このサブツリーに属する task の実績を年で絞る。
+      // task_entries は月をまたぐ task の実績を実測で年ごとに分けて持てるようにする
+      // ためのものなので、task.startAt の年と entry.year は一致しないことがある。
+      const scopeTaskIds = new Set(
+        tasks.filter((t) => scope.has(t.trackerPjId)).map((t) => t.id)
+      );
+      const actualHours = yEntries
+        .filter((e) => scopeTaskIds.has(e.taskId))
+        .reduce((a, e) => a + e.hours, 0);
       return {
         pj,
         plannedHours,

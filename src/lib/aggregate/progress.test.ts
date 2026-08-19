@@ -116,6 +116,57 @@ describe("contractProgress", () => {
     expect(row.plannedHours).toBe(0);
     expect(row.consumption).toBe(0);
   });
+
+  it("task の開始年と実績の年がずれていても、そのサブツリーの実績として拾う", () => {
+    // t3 は 2026年に開始する task だが、その実績は 2027年分として記録されている
+    // (task_entries が year/month を独立に持つのは、月をまたぐ task の実績を
+    // 実測で年ごとに分けられるようにするため。これは異常な入力ではない)。
+    const crossYearTask: Task = {
+      id: "t3",
+      trackerPjId: "葉1",
+      assigneeId: "w1",
+      title: "t3",
+      startAt: "2026-12-20T10:00:00+09:00",
+      endAt: "2026-12-20T12:00:00+09:00",
+    };
+    const crossYearEntry: TaskEntry = {
+      id: "e4",
+      taskId: "t3",
+      year: 2027,
+      month: 1,
+      hours: 5,
+    };
+    const tasks = [...TASKS, crossYearTask];
+    const entries = [...ENTRIES, crossYearEntry];
+
+    const [row] = contractProgress(entries, tasks, PJS, 2027);
+    expect(row.actualHours).toBe(5);
+  });
+
+  it("不変条件: contractProgress の actualHours 合計は orgTotals.totalHours と一致する", () => {
+    const crossYearTask: Task = {
+      id: "t3",
+      trackerPjId: "葉1",
+      assigneeId: "w1",
+      title: "t3",
+      startAt: "2026-12-20T10:00:00+09:00",
+      endAt: "2026-12-20T12:00:00+09:00",
+    };
+    const crossYearEntry: TaskEntry = {
+      id: "e4",
+      taskId: "t3",
+      year: 2027,
+      month: 1,
+      hours: 5,
+    };
+    const tasks = [...TASKS, crossYearTask];
+    const entries = [...ENTRIES, crossYearEntry];
+
+    const rows = contractProgress(entries, tasks, PJS, 2027);
+    const sumActual = rows.reduce((a, r) => a + r.actualHours, 0);
+    const totals = orgTotals(entries, tasks, PJS, TRACKERS, 2027);
+    expect(sumActual).toBe(totals.totalHours);
+  });
 });
 
 describe("orgTotals", () => {
