@@ -2161,7 +2161,17 @@ export function check<T>(schema: z.ZodType<T>, value: unknown): T | null {
   return result.data;
 }
 
-/** undefined のキーを落として snake_case のパッチを組む。 */
+/**
+ * undefined のキーを落として snake_case のパッチを組む。
+ *
+ * 呼び出し側との規約（nullable 列の update アクション全般で守ること）:
+ * - `patch` にキーが無い　　　　　　→ 変更しない（このオブジェクトにもキーを渡さず undefined にする）
+ * - `patch` にキーがあり値が undefined → 明示的にクリア（このオブジェクトには `null` を渡す）
+ * - `patch` にキーがあり値がある　　　→ その値に更新
+ *
+ * キーの有無の判定は `"foo" in patch` で行う。`patch.foo === undefined` で
+ * 判定すると「クリア」と「変更しない」を区別できなくなるので使わないこと。
+ */
 export function patchOf(
   map: Record<string, unknown | undefined>
 ): Record<string, unknown> {
@@ -2305,9 +2315,17 @@ export const createCoreSlice: StateCreator<
     try {
       const { error } = await supabase.from("workers").delete().eq("id", id);
       if (error) throw error;
+      // DB は pj.owner_worker_id / issues.assignee_id を on delete set null に
+      // しているので、ローカルも同じ範囲を undefined（宙ぶらりん）に落とす。
       set({
         workers: get().workers.filter((w) => w.id !== id),
         pjMembers: get().pjMembers.filter((m) => m.workerId !== id),
+        pjs: get().pjs.map((p) =>
+          p.ownerWorkerId === id ? { ...p, ownerWorkerId: undefined } : p
+        ),
+        issues: get().issues.map((i) =>
+          i.assigneeId === id ? { ...i, assigneeId: undefined } : i
+        ),
       });
     } catch (e) {
       fail(set, e);
@@ -2345,31 +2363,31 @@ export const createCoreSlice: StateCreator<
   updatePj: async (id, patch) => {
     if (!supabase) return;
     if (!check(pjPatchSchema, patch)) return;
+    // color は NOT NULL でクリア不可のため空文字は「変更しない」として扱う。
+    // ローカル・DB の両方で patch から color キーごと除いて解釈する。
+    const { color, ...rest } = patch;
+    const localPatch = color ? { ...rest, color } : rest;
     const prev = get().pjs;
-    set({ pjs: prev.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+    set({ pjs: prev.map((p) => (p.id === id ? { ...p, ...localPatch } : p)) });
     try {
       const { error } = await supabase
         .from("pj")
         .update(
           patchOf({
             parent_id:
-              patch.parentId === undefined
-                ? undefined
-                : (patch.parentId ?? null),
+              "parentId" in patch ? (patch.parentId ?? null) : undefined,
             name: patch.name,
-            color: patch.color || undefined,
+            color: color || undefined,
             owner_worker_id:
-              patch.ownerWorkerId === undefined
-                ? undefined
-                : (patch.ownerWorkerId ?? null),
+              "ownerWorkerId" in patch
+                ? (patch.ownerWorkerId ?? null)
+                : undefined,
             fiscal_year:
-              patch.fiscalYear === undefined
-                ? undefined
-                : (patch.fiscalYear ?? null),
+              "fiscalYear" in patch ? (patch.fiscalYear ?? null) : undefined,
             budget_amount:
-              patch.budgetAmount === undefined
-                ? undefined
-                : (patch.budgetAmount ?? null),
+              "budgetAmount" in patch
+                ? (patch.budgetAmount ?? null)
+                : undefined,
           })
         )
         .eq("id", id);
@@ -2478,11 +2496,8 @@ export const createCoreSlice: StateCreator<
         .update(
           patchOf({
             start_date:
-              patch.startDate === undefined
-                ? undefined
-                : (patch.startDate ?? null),
-            end_date:
-              patch.endDate === undefined ? undefined : (patch.endDate ?? null),
+              "startDate" in patch ? (patch.startDate ?? null) : undefined,
+            end_date: "endDate" in patch ? (patch.endDate ?? null) : undefined,
           })
         )
         .eq("pj_id", pjId);
@@ -2554,16 +2569,11 @@ export const createCoreSlice: StateCreator<
         .update(
           patchOf({
             parent_id:
-              patch.parentId === undefined
-                ? undefined
-                : (patch.parentId ?? null),
+              "parentId" in patch ? (patch.parentId ?? null) : undefined,
             assignee_id:
-              patch.assigneeId === undefined
-                ? undefined
-                : (patch.assigneeId ?? null),
+              "assigneeId" in patch ? (patch.assigneeId ?? null) : undefined,
             title: patch.title,
-            due_date:
-              patch.dueDate === undefined ? undefined : (patch.dueDate ?? null),
+            due_date: "dueDate" in patch ? (patch.dueDate ?? null) : undefined,
             status: patch.status,
           })
         )
@@ -2637,8 +2647,7 @@ export const createCoreSlice: StateCreator<
         .from("tasks")
         .update(
           patchOf({
-            issue_id:
-              patch.issueId === undefined ? undefined : (patch.issueId ?? null),
+            issue_id: "issueId" in patch ? (patch.issueId ?? null) : undefined,
             assignee_id: patch.assigneeId,
             title: patch.title,
             start_at: patch.startAt,

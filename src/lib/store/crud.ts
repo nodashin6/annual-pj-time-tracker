@@ -29,7 +29,17 @@ export function check<T>(schema: z.ZodType<T>, value: unknown): T | null {
   return result.data;
 }
 
-/** undefined のキーを落として snake_case のパッチを組む。 */
+/**
+ * undefined のキーを落として snake_case のパッチを組む。
+ *
+ * 呼び出し側との規約（nullable 列の update アクション全般で守ること）:
+ * - `patch` にキーが無い　　　　　　→ 変更しない（このオブジェクトにもキーを渡さず undefined にする）
+ * - `patch` にキーがあり値が undefined → 明示的にクリア（このオブジェクトには `null` を渡す）
+ * - `patch` にキーがあり値がある　　　→ その値に更新
+ *
+ * キーの有無の判定は `"foo" in patch` で行う。`patch.foo === undefined` で
+ * 判定すると「クリア」と「変更しない」を区別できなくなるので使わないこと。
+ */
 export function patchOf(
   map: Record<string, unknown | undefined>
 ): Record<string, unknown> {
