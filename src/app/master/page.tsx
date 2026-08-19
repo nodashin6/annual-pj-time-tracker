@@ -12,7 +12,7 @@ export default function MasterPage() {
         <p className="text-sm text-slate-500">ワーカーを管理します</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:max-w-md">
         <WorkersSection />
       </div>
 
