@@ -456,7 +456,8 @@ export default function PjDetailPage() {
       )}
 
       {/* tracker を持つノードにだけ：期間編集・外す・issue/calendar リンク */}
-      {tracker && (
+      {/* 表示ゲートは isLeaf 由来の leaf のみを主役にする。tracker はその行の値取得用。 */}
+      {leaf && tracker && (
         <TrackerCard
           id={id}
           tracker={tracker}
