@@ -20,68 +20,57 @@ export const supabase: SupabaseClient | null =
 export const isSupabaseConfigured = envResult.ok && envResult.configured;
 
 /** DB (snake_case) と アプリ型 (camelCase) の対応 */
-
-export type DbTeam = {
-  id: string;
-  name: string;
-};
+/** numeric 列は supabase-js から string で返ることがあるため number | string で受ける。 */
 
 export type DbWorker = {
   id: string;
   name: string;
 };
 
-export type DbClient = {
+export type DbPj = {
   id: string;
+  parent_id: string | null;
   name: string;
-};
-
-export type DbOrder = {
-  id: string;
-  client_id: string | null;
-  name: string;
-  fiscal_year: number | null;
+  color: string;
   owner_worker_id: string | null;
-  initial_hours: number | string;
-  planned_hours: number | string;
+  fiscal_year: number | null;
   budget_amount: number | string | null;
 };
 
-export type DbProject = {
-  id: string;
-  order_id: string;
-  team_id: string | null;
-  name: string;
-  color: string;
-  initial_hours: number | string;
-  planned_hours: number | string;
-};
-
-export type DbMilestone = {
-  id: string;
-  project_id: string;
-  name: string | null;
-  start_date: string;
-  end_date: string;
-};
-
-export type DbAssignment = {
-  id: string;
+export type DbPjMember = {
+  pj_id: string;
   worker_id: string;
-  project_id: string;
 };
 
-export type DbAchievement = {
-  id: string;
-  assignment_id: string;
-  milestone_id: string;
-  allowed_hours: number | string;
+export type DbTracker = {
+  pj_id: string;
+  start_date: string | null;
+  end_date: string | null;
 };
 
-export type DbEntry = {
+export type DbIssue = {
   id: string;
-  worker_id: string;
-  project_id: string;
+  tracker_pj_id: string;
+  parent_id: string | null;
+  assignee_id: string | null;
+  title: string;
+  due_date: string | null;
+  status: string;
+};
+
+export type DbTask = {
+  id: string;
+  tracker_pj_id: string;
+  issue_id: string | null;
+  assignee_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+};
+
+export type DbTaskEntry = {
+  id: string;
+  task_id: string;
   year: number;
   month: number;
   hours: number | string;
