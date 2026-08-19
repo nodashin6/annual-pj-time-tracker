@@ -320,7 +320,7 @@ begin
   insert into public.issues (tracker_pj_id, assignee_id, title, due_date, status)
     values (p1, w1, '認証基盤の刷新', date '2026-06-30', 'open') returning id into i1;
   insert into public.issues (tracker_pj_id, parent_id, assignee_id, title, due_date, status)
-    values (p1, i1, 'IdP 選定', date '2026-03-31', 'closed');
+    values (p1, i1, w1, 'IdP 選定', date '2026-03-31', 'closed');
   insert into public.issues (tracker_pj_id, title, due_date, status)
     values (p2, 'カート離脱率の改善', date '2026-09-30', 'open');
 
