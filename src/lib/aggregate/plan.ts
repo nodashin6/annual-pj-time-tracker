@@ -25,7 +25,11 @@ export function plannedHoursOf(task: Task): number {
 export const sumPlannedHours = (tasks: Task[]): number =>
   tasks.reduce((a, t) => a + plannedHoursOf(t), 0);
 
-/** 開始日時の年で絞る。 */
+/**
+ * 開始日時の年で絞る。
+ * 年の判定は overlapsMonth と同じくローカル時刻基準なので、
+ * 年末年始をまたぐ task はタイムゾーンによって属する年が変わりうる。
+ */
 export const tasksInYear = (tasks: Task[], year: number): Task[] =>
   tasks.filter((t) => new Date(t.startAt).getFullYear() === year);
 
@@ -34,6 +38,10 @@ export const tasksInYear = (tasks: Task[], year: number): Task[] =>
  *
  * 両区間とも半開区間として扱う。月ちょうど 00:00 に終わる task は、その月の
  * どの瞬間も占有していないので「重ならない」。実績入力画面のハイライト判定に使う。
+ *
+ * 月の境界は**実行環境のローカル時刻**で作る（利用者のカレンダー基準で判定するため）。
+ * したがって結果は閲覧者のタイムゾーンに依存する。テストを書くときは、
+ * フィクスチャの時刻も固定オフセットではなくローカル時刻で組み立てること。
  */
 export function overlapsMonth(
   task: Task,

@@ -77,36 +77,41 @@ describe("tasksInYear", () => {
 });
 
 describe("overlapsMonth", () => {
-  const span = (startAt: string, endAt: string): Task =>
-    task(startAt, endAt, "t");
+  // overlapsMonth は月の境界を「実行環境のローカル時刻」で作る（利用者のカレンダー基準）。
+  // そのためフィクスチャも固定オフセットではなくローカル時刻で組み立てる。
+  // +09:00 のような固定オフセットで書くと、UTC の CI と JST の手元で結果が変わる。
+  const localIso = (y: number, m: number, d: number, h = 0, min = 0): string =>
+    new Date(y, m - 1, d, h, min).toISOString();
+
+  const span = (s: string, e: string): Task => task(s, e, "t");
 
   it("単日の task はその月だけ重なる", () => {
-    const t = span("2026-04-20T10:00:00+09:00", "2026-04-20T18:00:00+09:00");
+    const t = span(localIso(2026, 4, 20, 10), localIso(2026, 4, 20, 18));
     expect(overlapsMonth(t, 2026, 3)).toBe(false);
     expect(overlapsMonth(t, 2026, 4)).toBe(true);
     expect(overlapsMonth(t, 2026, 5)).toBe(false);
   });
 
   it("月をまたぐ task は両方の月に重なる", () => {
-    const t = span("2026-03-25T10:00:00+09:00", "2026-04-05T18:00:00+09:00");
+    const t = span(localIso(2026, 3, 25, 10), localIso(2026, 4, 5, 18));
     expect(overlapsMonth(t, 2026, 3)).toBe(true);
     expect(overlapsMonth(t, 2026, 4)).toBe(true);
   });
 
   it("月末23:59に終わる task はその月に重なる", () => {
-    const t = span("2026-04-30T09:00:00+09:00", "2026-04-30T23:59:00+09:00");
+    const t = span(localIso(2026, 4, 30, 9), localIso(2026, 4, 30, 23, 59));
     expect(overlapsMonth(t, 2026, 4)).toBe(true);
     expect(overlapsMonth(t, 2026, 5)).toBe(false);
   });
 
   it("翌月1日0時ちょうどに終わる task は翌月に重ならない（半開区間）", () => {
-    const t = span("2026-03-25T10:00:00+09:00", "2026-04-01T00:00:00+09:00");
+    const t = span(localIso(2026, 3, 25, 10), localIso(2026, 4, 1, 0));
     expect(overlapsMonth(t, 2026, 3)).toBe(true);
     expect(overlapsMonth(t, 2026, 4)).toBe(false);
   });
 
   it("月初0時ちょうどに始まる task はその月に重なる", () => {
-    const t = span("2026-04-01T00:00:00+09:00", "2026-04-01T09:00:00+09:00");
+    const t = span(localIso(2026, 4, 1, 0), localIso(2026, 4, 1, 9));
     expect(overlapsMonth(t, 2026, 3)).toBe(false);
     expect(overlapsMonth(t, 2026, 4)).toBe(true);
   });
