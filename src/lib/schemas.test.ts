@@ -1,140 +1,162 @@
 import { describe, it, expect } from "vitest";
 import {
   validate,
+  pjInputSchema,
+  pjPatchSchema,
+  trackerInputSchema,
+  issueInputSchema,
+  taskInputSchema,
+  taskPatchSchema,
+  taskEntryInputSchema,
   workerInputSchema,
-  orderInputSchema,
-  projectInputSchema,
-  entryInputSchema,
 } from "./schemas";
 
-describe("validate + workerInputSchema", () => {
-  it("有効な名前を通し、trim する", () => {
-    const r = validate(workerInputSchema, { name: "  佐藤 太郎  " });
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.data.name).toBe("佐藤 太郎");
+const UUID = "11111111-1111-4111-8111-111111111111";
+const UUID2 = "22222222-2222-4222-8222-222222222222";
+
+describe("workerInputSchema", () => {
+  it("前後の空白を除去する", () => {
+    const r = validate(workerInputSchema, { name: "  佐藤  " });
+    expect(r.ok && r.data.name).toBe("佐藤");
   });
-  it("空名は弾く", () => {
+
+  it("空文字を弾く", () => {
     const r = validate(workerInputSchema, { name: "   " });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toContain("名称");
-  });
-  it("長すぎる名前は弾く", () => {
-    const r = validate(workerInputSchema, { name: "あ".repeat(121) });
-    expect(r.ok).toBe(false);
   });
 });
 
-describe("orderInputSchema", () => {
-  it("最小構成（name + 工数）を通す", () => {
-    const r = validate(orderInputSchema, {
-      name: "受注A",
-      initialHours: 100,
-      plannedHours: 120,
-    });
+describe("pjInputSchema", () => {
+  it("名前だけで通る（親なしルートノード）", () => {
+    const r = validate(pjInputSchema, { name: "A社" });
     expect(r.ok).toBe(true);
   });
-  it("負の工数を弾く", () => {
-    const r = validate(orderInputSchema, {
-      name: "受注A",
-      initialHours: -1,
-      plannedHours: 0,
-    });
+
+  it("parentId は uuid でなければ弾く", () => {
+    const r = validate(pjInputSchema, { name: "受注", parentId: "abc" });
     expect(r.ok).toBe(false);
   });
-  it("不正な clientId(uuid でない) を弾く", () => {
-    const r = validate(orderInputSchema, {
-      name: "受注A",
-      clientId: "not-a-uuid",
-      initialHours: 0,
-      plannedHours: 0,
-    });
+
+  it("color は #RRGGBB でなければ弾く", () => {
+    const r = validate(pjInputSchema, { name: "受注", color: "red" });
     expect(r.ok).toBe(false);
+  });
+
+  it("budgetAmount は負数を弾く", () => {
+    const r = validate(pjInputSchema, { name: "受注", budgetAmount: -1 });
+    expect(r.ok).toBe(false);
+  });
+
+  it("patch は部分適用できる", () => {
+    const r = validate(pjPatchSchema, { name: "改名だけ" });
+    expect(r.ok).toBe(true);
   });
 });
 
-describe("projectInputSchema", () => {
-  const orderId = "11111111-1111-1111-1111-111111111111";
-  it("有効なプロジェクトを通す", () => {
-    const r = validate(projectInputSchema, {
-      name: "PJ",
-      orderId,
-      color: "#6366f1",
-      initialHours: 10,
-      plannedHours: 20,
+describe("trackerInputSchema", () => {
+  it("開始 <= 終了 なら通る", () => {
+    const r = validate(trackerInputSchema, {
+      pjId: UUID,
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
     });
     expect(r.ok).toBe(true);
   });
-  it("空 color を許容する（自動採番用）", () => {
-    const r = validate(projectInputSchema, {
-      name: "PJ",
-      orderId,
-      color: "",
-      initialHours: 0,
-      plannedHours: 0,
-    });
-    expect(r.ok).toBe(true);
-  });
-  it("不正な color 形式を弾く", () => {
-    const r = validate(projectInputSchema, {
-      name: "PJ",
-      orderId,
-      color: "red",
-      initialHours: 0,
-      plannedHours: 0,
+
+  it("開始 > 終了 を弾く", () => {
+    const r = validate(trackerInputSchema, {
+      pjId: UUID,
+      startDate: "2026-12-31",
+      endDate: "2026-01-01",
     });
     expect(r.ok).toBe(false);
   });
-  it("orderId 未指定を弾く", () => {
-    const r = validate(projectInputSchema, {
-      name: "PJ",
-      initialHours: 0,
-      plannedHours: 0,
+
+  it("日付なしでも通る（期間未定の葉）", () => {
+    const r = validate(trackerInputSchema, { pjId: UUID });
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe("issueInputSchema", () => {
+  it("担当者なしで通る（宙ぶらりん可）", () => {
+    const r = validate(issueInputSchema, {
+      trackerPjId: UUID,
+      title: "カート離脱率の改善",
+    });
+    expect(r.ok && r.data.status).toBe("open");
+  });
+
+  it("未知の status を弾く", () => {
+    const r = validate(issueInputSchema, {
+      trackerPjId: UUID,
+      title: "x",
+      status: "wontfix",
     });
     expect(r.ok).toBe(false);
   });
 });
 
-describe("entryInputSchema", () => {
-  const ids = {
-    workerId: "11111111-1111-1111-1111-111111111111",
-    projectId: "22222222-2222-2222-2222-222222222222",
+describe("taskInputSchema", () => {
+  const base = {
+    trackerPjId: UUID,
+    assigneeId: UUID2,
+    title: "IdP 比較検討",
+    startAt: "2026-02-10T10:00:00+09:00",
+    endAt: "2026-02-10T18:00:00+09:00",
   };
-  it("有効なエントリを通す", () => {
-    const r = validate(entryInputSchema, {
-      ...ids,
-      year: 2026,
-      month: 6,
-      hours: 40,
-    });
-    expect(r.ok).toBe(true);
+
+  it("担当者と期間が揃えば通る", () => {
+    expect(validate(taskInputSchema, base).ok).toBe(true);
   });
-  it("month 範囲外を弾く", () => {
-    const r = validate(entryInputSchema, {
-      ...ids,
+
+  it("担当者なしを弾く（必須1名）", () => {
+    expect(
+      validate(taskInputSchema, { ...base, assigneeId: undefined }).ok
+    ).toBe(false);
+  });
+
+  it("開始 >= 終了 を弾く", () => {
+    const r = validate(taskInputSchema, { ...base, endAt: base.startAt });
+    expect(r.ok).toBe(false);
+  });
+
+  it("パースできない日時を弾く", () => {
+    const r = validate(taskInputSchema, { ...base, startAt: "きのう" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("patch は部分適用できる", () => {
+    expect(validate(taskPatchSchema, { title: "改題" }).ok).toBe(true);
+  });
+});
+
+describe("taskEntryInputSchema", () => {
+  it("1-12 月のみ通す", () => {
+    const ok = validate(taskEntryInputSchema, {
+      taskId: UUID,
+      year: 2026,
+      month: 12,
+      hours: 8,
+    });
+    expect(ok.ok).toBe(true);
+
+    const ng = validate(taskEntryInputSchema, {
+      taskId: UUID,
       year: 2026,
       month: 13,
-      hours: 40,
+      hours: 8,
     });
-    expect(r.ok).toBe(false);
+    expect(ng.ok).toBe(false);
   });
-  it("hours 0 を許容する（削除相当）", () => {
-    const r = validate(entryInputSchema, {
-      ...ids,
-      year: 2026,
-      month: 6,
-      hours: 0,
-    });
-    expect(r.ok).toBe(true);
-  });
-});
 
-describe("partial スキーマ（update 用）", () => {
-  it("一部フィールドのみでも検証を通す", () => {
-    const r = validate(orderInputSchema.partial(), { plannedHours: 50 });
-    expect(r.ok).toBe(true);
-  });
-  it("partial でも不正値は弾く", () => {
-    const r = validate(orderInputSchema.partial(), { plannedHours: -5 });
+  it("負の工数を弾く", () => {
+    const r = validate(taskEntryInputSchema, {
+      taskId: UUID,
+      year: 2026,
+      month: 1,
+      hours: -1,
+    });
     expect(r.ok).toBe(false);
   });
 });

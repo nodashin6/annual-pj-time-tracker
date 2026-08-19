@@ -32,3 +32,6 @@ next-env.d.ts
 
 # supabase CLI
 /supabase/.temp/
+
+# SDD ワークスペース（プラン実行中の作業記録。履歴に入れない）
+.superpowers/

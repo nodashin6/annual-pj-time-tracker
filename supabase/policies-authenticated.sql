@@ -12,8 +12,7 @@ declare
   t text;
 begin
   foreach t in array array[
-    'teams', 'workers', 'clients', 'orders', 'projects',
-    'milestones', 'assignments', 'achievements', 'entries'
+    'workers', 'pj', 'pj_members', 'tracker', 'issues', 'tasks', 'task_entries'
   ] loop
     -- デモ用の全許可ポリシーを削除
     execute format('drop policy if exists %I on public.%I', t || '_all', t);

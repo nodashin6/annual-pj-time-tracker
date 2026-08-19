@@ -1,28 +1,29 @@
 "use client";
 
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import {
-  monthlyStackByProject,
-  annualByProject,
-  orderProgress,
-  workerHours,
   orgTotals,
-} from "@/lib/aggregate";
+  monthlyStackByLeaf,
+  annualByLeaf,
+  contractProgress,
+  workerHours,
+} from "@/lib/aggregate/progress";
+import { leafPjs } from "@/lib/aggregate/tree";
+import { tasksInYear } from "@/lib/aggregate/plan";
 import { StatCard } from "@/components/StatCard";
-import { MonthlyStackedBar, ProjectPie } from "@/components/Charts";
+import { MonthlyStackedBar, LeafPie } from "@/components/Charts";
 import { consumptionColor } from "@/lib/ui";
 
 export default function DashboardPage() {
-  const { workers, clients, orders, projects, entries, year } = useStore();
+  const { workers, pjs, trackers, tasks, taskEntries, year } = useStore();
 
-  const totals = orgTotals(entries, orders, projects, year);
-  const monthlyStack = monthlyStackByProject(entries, projects, year);
-  const annual = annualByProject(entries, projects, year);
-  const progress = orderProgress(entries, orders, projects, year);
-  const whours = workerHours(entries, workers, year);
-
-  const clientName = (id?: string) =>
-    clients.find((c) => c.id === id)?.name ?? "—";
+  const leaves = leafPjs(pjs, trackers);
+  const totals = orgTotals(taskEntries, tasks, pjs, trackers, year);
+  const monthlyStack = monthlyStackByLeaf(taskEntries, tasks, leaves, year);
+  const annual = annualByLeaf(taskEntries, tasks, leaves, year);
+  const progress = contractProgress(taskEntries, tasks, pjs, year);
+  const whours = workerHours(taskEntries, tasks, workers, year);
 
   return (
     <div className="space-y-6">
@@ -40,7 +41,7 @@ export default function DashboardPage() {
         <StatCard
           label="予定工数 合計"
           value={`${totals.totalPlanned.toLocaleString()} h`}
-          sub={`受注 ${orders.length} 件`}
+          sub={`task ${tasksInYear(tasks, year).length} 件から算出`}
         />
         <StatCard
           label="消化率"
@@ -50,28 +51,30 @@ export default function DashboardPage() {
         />
         <StatCard
           label="稼働PJ数"
-          value={`${totals.activeProjects}`}
-          sub={`登録 ${projects.length} 件`}
+          value={`${totals.activeLeaves}`}
+          sub={`葉pj ${leaves.length} 件`}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <MonthlyStackedBar data={monthlyStack} projects={projects} />
-        <ProjectPie data={annual} />
+        <MonthlyStackedBar data={monthlyStack} leaves={leaves} />
+        <LeafPie data={annual} />
       </div>
 
-      {/* 受注別 工数の充足状況 */}
+      {/* 契約ノード別 工数の充足状況 */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">
-          受注別 工数（当初 / 予定 / 実績 / 消化率）
+          契約ノード別 工数（予定 / 実績 / 消化率）
         </h3>
+        <p className="mb-3 text-xs text-slate-400">
+          年度か予算を持つ pj
+          のサブツリーのみを対象とする内訳です。契約ノードを持たない木は上の合計には入りますが、この表には出ません。
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-500">
                 <th className="py-2 pr-4 font-medium">受注</th>
-                <th className="py-2 pr-4 font-medium">顧客</th>
-                <th className="py-2 pr-4 text-right font-medium">当初</th>
                 <th className="py-2 pr-4 text-right font-medium">予定</th>
                 <th className="py-2 pr-4 text-right font-medium">実績</th>
                 <th className="py-2 pr-4 text-right font-medium">消化率</th>
@@ -80,13 +83,14 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {progress.map((p) => (
-                <tr key={p.order.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4 font-medium">{p.order.name}</td>
-                  <td className="py-2 pr-4 text-slate-500">
-                    {clientName(p.order.clientId)}
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums text-slate-500">
-                    {p.initialHours.toLocaleString()}
+                <tr key={p.pj.id} className="border-b border-slate-100">
+                  <td className="py-2 pr-4 font-medium">
+                    <Link
+                      href={`/pj/${p.pj.id}`}
+                      className="text-indigo-600 hover:underline"
+                    >
+                      {p.pj.name}
+                    </Link>
                   </td>
                   <td className="py-2 pr-4 text-right tabular-nums">
                     {p.plannedHours.toLocaleString()}
@@ -115,8 +119,8 @@ export default function DashboardPage() {
               ))}
               {progress.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-400">
-                    受注が未登録です。「受注」から追加してください。
+                  <td colSpan={5} className="py-6 text-center text-slate-400">
+                    契約ノードがありません。プロジェクトのノードに年度か予算を入力すると受注として集計されます。
                   </td>
                 </tr>
               )}

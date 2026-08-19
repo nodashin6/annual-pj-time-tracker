@@ -13,21 +13,21 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { Project } from "@/lib/types";
+import type { Pj } from "@/lib/types";
 
 const CARD = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 
 export function MonthlyStackedBar({
   data,
-  projects,
+  leaves,
 }: {
   data: Array<Record<string, number | string>>;
-  projects: Project[];
+  leaves: Pj[];
 }) {
   return (
     <div className={CARD}>
       <h3 className="mb-3 text-sm font-semibold text-slate-700">
-        月次 工数（プロジェクト別・積み上げ）
+        月次 工数（葉pj別・積み上げ）
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart
@@ -39,13 +39,13 @@ export function MonthlyStackedBar({
           <YAxis tick={{ fontSize: 12 }} unit="h" />
           <Tooltip formatter={(v: number) => `${v} h`} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          {projects.map((p) => (
+          {leaves.map((pj) => (
             <Bar
-              key={p.id}
-              dataKey={p.id}
-              name={p.name}
+              key={pj.id}
+              dataKey={pj.id}
+              name={pj.name}
               stackId="a"
-              fill={p.color}
+              fill={pj.color}
             />
           ))}
         </BarChart>
@@ -54,23 +54,19 @@ export function MonthlyStackedBar({
   );
 }
 
-export function ProjectPie({
-  data,
-}: {
-  data: Array<{ project: Project; hours: number }>;
-}) {
+export function LeafPie({ data }: { data: Array<{ pj: Pj; hours: number }> }) {
   const flat = data
     .filter((d) => d.hours > 0)
     .map((d) => ({
-      id: d.project.id,
-      name: d.project.name,
+      id: d.pj.id,
+      name: d.pj.name,
       hours: d.hours,
-      color: d.project.color,
+      color: d.pj.color,
     }));
   return (
     <div className={CARD}>
       <h3 className="mb-3 text-sm font-semibold text-slate-700">
-        年間 プロジェクト構成比
+        年間 葉pj構成比
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>

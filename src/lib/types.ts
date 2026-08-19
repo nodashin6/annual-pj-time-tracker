@@ -1,98 +1,82 @@
-export type Team = {
-  id: string;
-  name: string;
-};
+// ========== コア層 ==========
+// この層は工数を一切知らない。実績拡張層を削除しても成立する。
 
-/**
- * ワーカー（作業者）。assignments でプロジェクトへ直接アサインする。
- * 稼働キャパは持たない（本システムはプロジェクト工数の充足が主眼）。
- */
+/** ワーカー（作業者）。pj_members で pj へアサインする。 */
 export type Worker = {
   id: string;
   name: string;
 };
 
-export type Client = {
-  id: string;
-  name: string;
-};
-
 /**
- * 受注（order）: 顧客からの受注。複数年度にまたがるプロジェクトを束ねる契約単位。
- * 1つの受注が N 個の細分化されたプロジェクトを持つ。
+ * pj: 顧客・受注・プロジェクトを統合した再帰ツリーのノード。
+ * fiscalYear / budgetAmount が入っているノードを「契約単位（受注）」とみなす。
+ * 判定は aggregate/tree.ts の isContractNode() でのみ行う。
  */
-export type Order = {
+export type Pj = {
   id: string;
-  clientId?: string;
-  name: string;
-  /** 会計年度（受注の基点） */
-  fiscalYear?: number;
-  /** 社内担当ワーカー */
-  ownerWorkerId?: string;
-  /** 当初工数（受注時点の初期見積, 時間） */
-  initialHours: number;
-  /** 予定工数（現時点の予定, 時間） */
-  plannedHours: number;
-  /** 予算（金額） */
-  budgetAmount?: number;
-};
-
-/** プロジェクト: 受注を細分化した作業単位。1チームが担当する。 */
-export type Project = {
-  id: string;
-  orderId: string;
-  teamId?: string;
+  parentId?: string;
   name: string;
   /** グラフ表示用のカラー（HEX） */
   color: string;
-  /** 当初工数（プロジェクト固有の初期見積, 時間）。受注や他PJとは独立。 */
-  initialHours: number;
-  /** 予定工数（プロジェクト固有の現時点の予定, 時間） */
-  plannedHours: number;
+  ownerWorkerId?: string;
+  fiscalYear?: number;
+  budgetAmount?: number;
 };
 
-/** マイルストーン（プロジェクトの区間）。日付で区間を指定する（メンバー非依存）。 */
-export type Milestone = {
-  id: string;
-  projectId: string;
-  name?: string;
-  /** 区間開始日（YYYY-MM-DD） */
-  startDate: string;
-  /** 区間終了日（YYYY-MM-DD） */
-  endDate: string;
-};
-
-/**
- * アサインメント（worker × project の多対多）。
- * worker をプロジェクトへ直接アサインする。担当チームの全員が自動参加ではなく、一部を割り当てる。
- * 将来 role / allocationPct などを足せる拡張ポイント。
- */
-export type Assignment = {
-  id: string;
+export type PjMember = {
+  pjId: string;
   workerId: string;
-  projectId: string;
 };
 
 /**
- * アチーブメント（アサイン × マイルストーンの許容工数）。
- * 「あるメンバー(assignment)がその区間(milestone)でどれだけ働いてよいか」を表す。
+ * tracker: 「この pj は葉である」という事実そのもの。旧 milestones の吸収先。
+ * 行の存在が葉の定義であり、kind のような宣言フラグは持たない。
  */
-export type Achievement = {
-  id: string;
-  assignmentId: string;
-  milestoneId: string;
-  /** 働いてよい上限工数（時間） */
-  allowedHours: number;
+export type Tracker = {
+  pjId: string;
+  /** YYYY-MM-DD */
+  startDate?: string;
+  /** YYYY-MM-DD */
+  endDate?: string;
 };
 
-/**
- * 工数エントリ: あるワーカーが、ある年月に、あるプロジェクトへ投下した時間。
- * 月単位で管理する（年間稼働の集計が主目的のため）。
- */
-export type Entry = {
+/** issue: GitHub issue 相当。階層あり・期日あり・担当者は宙ぶらりん可。 */
+export type Issue = {
   id: string;
-  workerId: string;
-  projectId: string;
+  trackerPjId: string;
+  parentId?: string;
+  assigneeId?: string;
+  title: string;
+  /** YYYY-MM-DD */
+  dueDate?: string;
+  status: IssueStatus;
+};
+
+export const ISSUE_STATUSES = ["open", "closed"] as const;
+export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+
+/**
+ * task: Google Calendar のイベント相当。階層なし・時刻付き期間・担当者1名必須。
+ * 予定工数は期間から導出するため、工数の項目を持たない。
+ */
+export type Task = {
+  id: string;
+  trackerPjId: string;
+  issueId?: string;
+  assigneeId: string;
+  title: string;
+  /** ISO8601 */
+  startAt: string;
+  /** ISO8601 */
+  endAt: string;
+};
+
+// ========== 実績拡張層 ==========
+// コア層を一方向に参照する。担当者は task.assigneeId から引くため持たない。
+
+export type TaskEntry = {
+  id: string;
+  taskId: string;
   year: number;
   /** 1-12 */
   month: number;
