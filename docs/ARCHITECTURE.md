@@ -13,24 +13,25 @@ UI (app/**, components/**)              ← React / Next.js App Router
        ├─ core.ts                       ← pj / tracker / issue / task の CRUD スライス
        ├─ actuals.ts                    ← task_entries（実績）の CRUD スライス
        ├─ mappers.ts                    ← DB行 ⇄ アプリ内型の変換
+       ├─ validate.ts（補助）           ← tracker/task の期間パッチのマージ + 順序検証（純関数）
        ├─ crud.ts（補助）               ← 各スライス共通の `fail` / `check` / `patchOf`
-       ├─ types.ts（補助）              ← スライス非依存の共有型 `Status` / `Shared`
-       ├─ 検証 (lib/schemas.ts)         ← Zod。書き込み前に入力を検証
-       ├─ 通知 (lib/notify.ts)          ← トースト（成功/失敗）
-       ├─ 集計 (lib/aggregate/)         ← 純関数。テスト対象
-       │    ├─ tree.ts                  ← コア層。pj ツリーの走査（親子・祖先・葉・契約判定）
-       │    ├─ plan.ts                  ← コア層。task の期間から予定工数を導出
-       │    └─ progress.ts              ← 実績拡張層。task_entries を集計（コア層に一方向依存）
-       └─ 永続化 (lib/supabase.ts)      ← Supabase(PostgreSQL) クライアント
-            └─ 環境検証 (lib/env.ts)    ← 起動時に接続情報を Zod 検証
+       └─ types.ts（補助）              ← スライス非依存の共有型 `Status` / `Shared`
+  ├─ 検証 (lib/schemas.ts)              ← Zod。書き込み前に入力を検証
+  ├─ 通知 (lib/notify.ts)               ← トースト（成功/失敗）
+  ├─ 集計 (lib/aggregate/)              ← 純関数。テスト対象
+  │    ├─ tree.ts                       ← コア層。pj ツリーの走査（親子・祖先・葉・契約判定）
+  │    ├─ plan.ts                       ← コア層。task の期間から予定工数を導出
+  │    └─ progress.ts                   ← 実績拡張層。task_entries を集計（コア層に一方向依存）
+  └─ 永続化 (lib/supabase.ts)           ← Supabase(PostgreSQL) クライアント
+       └─ 環境検証 (lib/env.ts)         ← 起動時に接続情報を Zod 検証
 ```
 
 ### 依存の向き
 
 - UI は `store` にのみ依存し、Supabase を直接触らない。
-- `store` の各書き込みアクションは **`schemas.ts` で検証 → Supabase 反映 → 楽観的更新**の順で処理する。
+- `store` の各書き込みアクションは **`schemas.ts` で検証 → 楽観的更新（先にローカル状態を更新）→ Supabase 反映**の順で処理する。Supabase 反映が失敗したら `prev` へロールバックする（詳細は「状態管理の方針」を参照）。
 - `aggregate/` は入力（配列）から出力（集計値）だけを計算する純関数群で、副作用を持たない。これによりユニットテストが容易。
-- `aggregate/` 内部にも依存の向きがある: `tree.ts` / `plan.ts`（コア層）は `progress.ts`（実績拡張層）を import しない。逆方向のみ許可される。この向きは `aggregate/layering.test.ts` が固定している。
+- `aggregate/` 内部にも依存の向きがある: `tree.ts` / `plan.ts`（コア層）は `progress.ts`（実績拡張層）を import しない。逆方向のみ許可される。この向きは `aggregate/layering.test.ts` が固定している。ただしこのテストが固定するのは `aggregate/` 内部の向きだけで、コア層全体が実績層に依存しないことまでは保証しない。`store/core.ts` は削除カスケード（`removePj` / `detachTracker`）で `taskEntries` を掃除するため `ActualsSlice` の型を import しており、実績スライスの存在を前提にした上で成立している。「コア層は実績ゼロ件で完結する」という不変条件（下記）が指しているのは `aggregate/tree.ts` と `aggregate/plan.ts` の2ファイルであり、`store/core.ts` はその範囲外。
 
 ## データモデル
 

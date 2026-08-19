@@ -113,6 +113,16 @@ export type ContractProgress = {
 /**
  * 契約ノード別 工数の充足状況。
  * 予定は配下 task の期間から導出するので、task が1件も無い契約の予定は 0 になる。
+ *
+ * 対象範囲: `isContractNode()` を満たすノードの subtree（`descendantIds`）だけ。
+ * `orgTotals` の対象範囲（年内の全 task_entries / 全 task）とは母集団が異なり、
+ * 一致するとは限らない。具体的には:
+ * - 契約ノードが1つも無いツリーでは、この関数は空配列を返す（`orgTotals` は
+ *   0 にならない）。
+ * - 契約ノードが入れ子になっている場合、内側のノード配下の実績は外側・内側
+ *   両方の行でカウントされる（この関数の全行の actualHours 合計は
+ *   `orgTotals.totalHours` を上回り得る）。
+ * 詳細は progress.test.ts の該当ケースを参照。
  */
 export function contractProgress(
   entries: TaskEntry[],
@@ -156,6 +166,16 @@ export type Totals = {
   activeLeaves: number;
 };
 
+/**
+ * 組織全体（年内の全 pj ツリー横断）の実績・予定の集計。
+ *
+ * 対象範囲: その年に該当する全 task_entries / 全 task。契約ノード配下か
+ * どうかは問わない（`contractProgress` と異なり `isContractNode` を経由しない）。
+ * この「全体の正直な数字」であることを崩さないため、契約ノードの subtree に
+ * スコープを絞る変更はしないこと（それをやると木の構造次第で見えない工数が
+ * 生まれる）。`contractProgress` とは母集団が異なるので両者が一致する保証は
+ * 無い（progress.test.ts 参照）。
+ */
 export function orgTotals(
   entries: TaskEntry[],
   tasks: Task[],

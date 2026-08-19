@@ -143,7 +143,7 @@ describe("contractProgress", () => {
     expect(row.actualHours).toBe(5);
   });
 
-  it("不変条件: contractProgress の actualHours 合計は orgTotals.totalHours と一致する", () => {
+  it("この1本のツリー（契約ノードが1つだけ全体を覆う）に限れば、actualHours 合計は orgTotals.totalHours と一致する（一般には保証されない不変条件ではない。下記2件を参照）", () => {
     const crossYearTask: Task = {
       id: "t3",
       trackerPjId: "葉1",
@@ -166,6 +166,93 @@ describe("contractProgress", () => {
     const sumActual = rows.reduce((a, r) => a + r.actualHours, 0);
     const totals = orgTotals(entries, tasks, PJS, TRACKERS, 2027);
     expect(sumActual).toBe(totals.totalHours);
+  });
+
+  it("契約ノードが1つも無いツリーでは undercount する: orgTotals は実績を数えるが contractProgress は空になる", () => {
+    // fiscalYear / budgetAmount のどちらも持たない木。/pj からはこの形が作れる。
+    const noContractPjs: Pj[] = [
+      { id: "root", name: "root", color: "#000" },
+      { id: "leaf", parentId: "root", name: "leaf", color: "#111" },
+    ];
+    const noContractTrackers: Tracker[] = [{ pjId: "leaf" }];
+    const noContractTasks: Task[] = [
+      {
+        id: "nt1",
+        trackerPjId: "leaf",
+        assigneeId: "w1",
+        title: "nt1",
+        startAt: "2026-02-10T10:00:00+09:00",
+        endAt: "2026-02-10T18:00:00+09:00",
+      },
+    ];
+    const noContractEntries: TaskEntry[] = [
+      { id: "ne1", taskId: "nt1", year: 2026, month: 2, hours: 4 },
+    ];
+
+    const progress = contractProgress(
+      noContractEntries,
+      noContractTasks,
+      noContractPjs,
+      2026
+    );
+    expect(progress).toEqual([]);
+
+    const totals = orgTotals(
+      noContractEntries,
+      noContractTasks,
+      noContractPjs,
+      noContractTrackers,
+      2026
+    );
+    expect(totals.totalHours).toBe(4);
+  });
+
+  it("契約ノードが入れ子だと overcount する: 内側の実績が外側・内側の両方の行で数えられる", () => {
+    // 顧客側にも受注側にも fiscalYear を入れると、内側の契約ノードのぶんが
+    // 二重に数えられる。何もこれを禁止していない。
+    const nestedPjs: Pj[] = [
+      { id: "outer", name: "outer", color: "#000", fiscalYear: 2026 },
+      {
+        id: "inner",
+        parentId: "outer",
+        name: "inner",
+        color: "#000",
+        fiscalYear: 2026,
+      },
+      { id: "leaf", parentId: "inner", name: "leaf", color: "#111" },
+    ];
+    const nestedTrackers: Tracker[] = [{ pjId: "leaf" }];
+    const nestedTasks: Task[] = [
+      {
+        id: "nx1",
+        trackerPjId: "leaf",
+        assigneeId: "w1",
+        title: "nx1",
+        startAt: "2026-02-10T10:00:00+09:00",
+        endAt: "2026-02-10T18:00:00+09:00",
+      },
+    ];
+    const nestedEntries: TaskEntry[] = [
+      { id: "nxe1", taskId: "nx1", year: 2026, month: 2, hours: 5 },
+    ];
+
+    const rows = contractProgress(nestedEntries, nestedTasks, nestedPjs, 2026);
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r) => r.pj.id === "outer")?.actualHours).toBe(5);
+    expect(rows.find((r) => r.pj.id === "inner")?.actualHours).toBe(5);
+
+    const sumActual = rows.reduce((a, r) => a + r.actualHours, 0);
+    const totals = orgTotals(
+      nestedEntries,
+      nestedTasks,
+      nestedPjs,
+      nestedTrackers,
+      2026
+    );
+    // 列の合計(10)は org 全体の実績(5)を上回る = 「合計とその内訳」としては読めない。
+    expect(sumActual).toBe(10);
+    expect(totals.totalHours).toBe(5);
+    expect(sumActual).toBeGreaterThan(totals.totalHours);
   });
 });
 

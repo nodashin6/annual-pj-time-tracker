@@ -12,7 +12,7 @@ export const LABEL = "mb-1 block text-xs font-medium text-slate-500";
 
 /**
  * プロジェクトのグラフ表示色パレット。
- * 自動採番（store.addProject）と新規作成フォームの初期色で共有する単一の真実の源。
+ * 自動採番（store/core.ts の addPj）と新規作成フォームの初期色で共有する単一の真実の源。
  */
 export const PALETTE: readonly string[] = [
   "#6366f1",
