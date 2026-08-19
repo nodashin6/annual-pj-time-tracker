@@ -71,6 +71,14 @@ const pjInputBase = z.object({
 export const pjInputSchema = pjInputBase;
 export const pjPatchSchema = pjInputBase.partial();
 
+/**
+ * tracker の期間順序エラーメッセージ。
+ * `trackerPatchSchema` は `.partial()` で refine が落ちるため、
+ * store 側（updateTracker）でマージ後の値を使って同じ検証を再現する。
+ * メッセージはここを唯一の真実の源にして両方から参照する。
+ */
+export const TRACKER_ORDER_MESSAGE = "終了日は開始日以降にしてください";
+
 // ---- tracker（葉の印 + 期間） ----
 const trackerInputBase = z.object({
   pjId: z.string().uuid(),
@@ -79,7 +87,7 @@ const trackerInputBase = z.object({
 });
 export const trackerInputSchema = trackerInputBase.refine(
   (v) => !v.startDate || !v.endDate || v.startDate <= v.endDate,
-  { message: "終了日は開始日以降にしてください", path: ["endDate"] }
+  { message: TRACKER_ORDER_MESSAGE, path: ["endDate"] }
 );
 export const trackerPatchSchema = trackerInputBase.partial();
 
@@ -95,6 +103,14 @@ const issueInputBase = z.object({
 export const issueInputSchema = issueInputBase;
 export const issuePatchSchema = issueInputBase.partial();
 
+/**
+ * task の期間順序エラーメッセージ。
+ * `taskPatchSchema` は `.partial()` で refine が落ちるため、
+ * store 側（updateTask）でマージ後の値を使って同じ検証を再現する。
+ * メッセージはここを唯一の真実の源にして両方から参照する。
+ */
+export const TASK_ORDER_MESSAGE = "終了日時は開始日時より後にしてください";
+
 // ---- task（カレンダーイベント相当） ----
 const taskInputBase = z.object({
   trackerPjId: z.string().uuid(),
@@ -106,7 +122,7 @@ const taskInputBase = z.object({
 });
 export const taskInputSchema = taskInputBase.refine(
   (v) => Date.parse(v.startAt) < Date.parse(v.endAt),
-  { message: "終了日時は開始日時より後にしてください", path: ["endAt"] }
+  { message: TASK_ORDER_MESSAGE, path: ["endAt"] }
 );
 export const taskPatchSchema = taskInputBase.partial();
 

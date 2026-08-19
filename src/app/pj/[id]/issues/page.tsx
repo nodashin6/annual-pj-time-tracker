@@ -5,27 +5,9 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { breadcrumb, isLeaf } from "@/lib/aggregate/tree";
-import type { Issue, Pj, Worker } from "@/lib/types";
+import type { Issue, Worker } from "@/lib/types";
 import { CARD, INPUT, LABEL, BTN, DEL } from "@/lib/ui";
-
-function Breadcrumb({ crumbs, id }: { crumbs: Pj[]; id: string }) {
-  return (
-    <nav className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-      {crumbs.map((c, i) => (
-        <span key={c.id} className="flex items-center gap-1">
-          {i > 0 && <span className="text-slate-300">/</span>}
-          {c.id === id ? (
-            <span className="font-medium text-slate-700">{c.name}</span>
-          ) : (
-            <Link href={`/pj/${c.id}`} className="hover:underline">
-              {c.name}
-            </Link>
-          )}
-        </span>
-      ))}
-    </nav>
-  );
-}
+import { Breadcrumb } from "@/app/pj/_components/Breadcrumb";
 
 function IssueRow({
   issue,
@@ -248,6 +230,12 @@ export default function PjIssuesPage() {
   };
 
   const deleteIssue = (issue: Issue) => {
+    if (
+      !confirm(
+        `「${issue.title}」を削除します。配下の子issue もすべて削除されます。よろしいですか？`
+      )
+    )
+      return;
     removeIssue(issue.id);
   };
 

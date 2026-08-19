@@ -17,10 +17,12 @@ import {
   pjPatchSchema,
   trackerInputSchema,
   trackerPatchSchema,
+  TRACKER_ORDER_MESSAGE,
   issueInputSchema,
   issuePatchSchema,
   taskInputSchema,
   taskPatchSchema,
+  TASK_ORDER_MESSAGE,
 } from "../schemas";
 import type { PjInput, TrackerInput, IssueInput, TaskInput } from "../schemas";
 import {
@@ -32,6 +34,7 @@ import {
   toTask,
 } from "./mappers";
 import { fail, check, patchOf } from "./crud";
+import { notify } from "../notify";
 import { PALETTE } from "../ui";
 import type { Shared } from "./types";
 // removePj / detachTracker が taskEntries も掃除するため、実績スライスの型が要る。
@@ -296,6 +299,17 @@ export const createCoreSlice: StateCreator<
   updateTracker: async (pjId, patch) => {
     if (!supabase) return;
     if (!check(trackerPatchSchema, patch)) return;
+    // trackerPatchSchema は .partial() で startDate <= endDate の refine が
+    // 落ちているため、既存の tracker とマージした値で同じ検証をここで再現する。
+    // patch に無いキーは既存値を使う（"in" で判定。undefined は明示的なクリア）。
+    const current = get().trackers.find((t) => t.pjId === pjId);
+    const mergedStart =
+      "startDate" in patch ? patch.startDate : current?.startDate;
+    const mergedEnd = "endDate" in patch ? patch.endDate : current?.endDate;
+    if (mergedStart && mergedEnd && mergedStart > mergedEnd) {
+      notify.error(TRACKER_ORDER_MESSAGE);
+      return;
+    }
     const prev = get().trackers;
     set({
       trackers: prev.map((t) => (t.pjId === pjId ? { ...t, ...patch } : t)),
@@ -450,6 +464,21 @@ export const createCoreSlice: StateCreator<
   updateTask: async (id, patch) => {
     if (!supabase) return;
     if (!check(taskPatchSchema, patch)) return;
+    // taskPatchSchema は .partial() で startAt < endAt の refine が落ちている
+    // ため、既存の task とマージした値で同じ検証をここで再現する。
+    // startAt / endAt は必須列（クリア不可）なので、patch に無ければ ?? で
+    // 既存値にフォールバックする（"in" 判定は使わない）。
+    const current = get().tasks.find((t) => t.id === id);
+    const mergedStart = patch.startAt ?? current?.startAt;
+    const mergedEnd = patch.endAt ?? current?.endAt;
+    if (
+      mergedStart &&
+      mergedEnd &&
+      !(Date.parse(mergedStart) < Date.parse(mergedEnd))
+    ) {
+      notify.error(TASK_ORDER_MESSAGE);
+      return;
+    }
     const prev = get().tasks;
     set({ tasks: prev.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
     try {
