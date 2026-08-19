@@ -56,7 +56,8 @@ export type CoreActions = {
 
   addPj: (input: PjInput) => Promise<string | undefined>;
   updatePj: (id: string, patch: Partial<PjInput>) => Promise<void>;
-  removePj: (id: string) => Promise<void>;
+  /** 削除できたかを返す。呼び出し側が成功時のみ遷移できるようにするため。 */
+  removePj: (id: string) => Promise<boolean>;
 
   addPjMember: (pjId: string, workerId: string) => Promise<void>;
   removePjMember: (pjId: string, workerId: string) => Promise<void>;
@@ -206,7 +207,7 @@ export const createCoreSlice: StateCreator<
     }
   },
   removePj: async (id) => {
-    if (!supabase) return;
+    if (!supabase) return false;
     try {
       const { error } = await supabase.from("pj").delete().eq("id", id);
       if (error) throw error;
@@ -230,8 +231,10 @@ export const createCoreSlice: StateCreator<
         tasks: get().tasks.filter((t) => !gone.has(t.trackerPjId)),
         taskEntries: get().taskEntries.filter((e) => !goneTasks.has(e.taskId)),
       });
+      return true;
     } catch (e) {
       fail(set, e);
+      return false;
     }
   },
 

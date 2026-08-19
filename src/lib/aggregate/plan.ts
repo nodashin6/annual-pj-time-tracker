@@ -28,3 +28,22 @@ export const sumPlannedHours = (tasks: Task[]): number =>
 /** 開始日時の年で絞る。 */
 export const tasksInYear = (tasks: Task[], year: number): Task[] =>
   tasks.filter((t) => new Date(t.startAt).getFullYear() === year);
+
+/**
+ * task の期間 [startAt, endAt) が year/month の月と重なるか。
+ *
+ * 両区間とも半開区間として扱う。月ちょうど 00:00 に終わる task は、その月の
+ * どの瞬間も占有していないので「重ならない」。実績入力画面のハイライト判定に使う。
+ */
+export function overlapsMonth(
+  task: Task,
+  year: number,
+  month: number
+): boolean {
+  const from = new Date(year, month - 1, 1).getTime();
+  const to = new Date(year, month, 1).getTime(); // 翌月1日0時
+  const s = Date.parse(task.startAt);
+  const e = Date.parse(task.endAt);
+  if (!Number.isFinite(s) || !Number.isFinite(e)) return false;
+  return s < to && e > from;
+}

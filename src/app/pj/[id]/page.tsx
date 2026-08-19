@@ -368,8 +368,8 @@ export default function PjDetailPage() {
       )
     )
       return;
-    await removePj(id);
-    router.push("/pj");
+    // 削除に失敗したときは遷移しない（トーストだけ出して画面に留まる）。
+    if (await removePj(id)) router.push("/pj");
   };
 
   const addChild = async () => {

@@ -4,21 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import { useStore } from "@/lib/store";
-import { plannedHoursOf } from "@/lib/aggregate/plan";
+import { plannedHoursOf, overlapsMonth } from "@/lib/aggregate/plan";
 import { MONTHS, MONTH_LABELS } from "@/lib/types";
 import type { Task } from "@/lib/types";
-
-/**
- * task の期間 [startAt, endAt) が year/month の月と重なるか。
- * 入力自体はどの月にも許可するので、これはハイライトの有無だけを決める。
- */
-const overlapsMonth = (task: Task, year: number, month: number): boolean => {
-  const from = new Date(year, month - 1, 1).getTime();
-  const to = new Date(year, month, 1).getTime(); // 翌月1日0時
-  const s = Date.parse(task.startAt);
-  const e = Date.parse(task.endAt);
-  return s < to && e >= from;
-};
 
 function ChildRow({
   task,
@@ -53,7 +41,7 @@ function ChildRow({
             <input
               type="number"
               min={0}
-              step={1}
+              step={0.1}
               value={hoursOf(task.id, m) || ""}
               placeholder="0"
               onChange={(e) =>
