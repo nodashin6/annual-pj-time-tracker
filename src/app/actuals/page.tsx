@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useStore } from "@/lib/store";
-import { filterByYear } from "@/lib/aggregate";
 
-export default function WorkerEntriesIndexPage() {
-  const { workers, assignments, entries, year } = useStore();
+export default function ActualsIndexPage() {
+  const { workers, tasks, taskEntries, year } = useStore();
 
-  const assignCount = (id: string) =>
-    assignments.filter((a) => a.workerId === id).length;
-  const yearHours = (id: string) =>
-    filterByYear(entries, year)
-      .filter((e) => e.workerId === id)
+  const workerTasks = (id: string) => tasks.filter((t) => t.assigneeId === id);
+  const pjCount = (id: string) =>
+    new Set(workerTasks(id).map((t) => t.trackerPjId)).size;
+  const yearHours = (id: string) => {
+    const taskIds = new Set(workerTasks(id).map((t) => t.id));
+    return taskEntries
+      .filter((e) => e.year === year && taskIds.has(e.taskId))
       .reduce((a, e) => a + e.hours, 0);
+  };
 
   if (workers.length === 0) {
     return (
@@ -31,13 +33,13 @@ export default function WorkerEntriesIndexPage() {
         {workers.map((w) => (
           <Link
             key={w.id}
-            href={`/worker-entries/${w.id}`}
+            href={`/actuals/${w.id}`}
             className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow"
           >
             <div>
               <div className="font-semibold text-slate-800">{w.name}</div>
               <div className="mt-0.5 text-xs text-slate-400">
-                {assignCount(w.id)} プロジェクト
+                {pjCount(w.id)} プロジェクト
               </div>
             </div>
             <div className="text-right">
