@@ -46,6 +46,10 @@
 -- 年間稼働トラッカー — Supabase スキーマ
 -- Supabase ダッシュボード > SQL Editor に貼り付けて実行してください。
 --
+-- ⚠️ 破壊的スクリプトです。このスクリプトを再実行すると、旧モデル・新モデルを問わず
+--   既存のテーブル（workers を含む）とそのデータは全て破棄され、空の状態から再作成されます。
+--   既存データの移行は行いません。
+--
 -- データモデル:
 --   コア層:   pj (再帰ツリー) ─ tracker (葉の印) ─ issues / tasks
 --   実績拡張層: task_entries (task × 年月 × 時間)
@@ -56,6 +60,9 @@
 --   実績のみを task_entries に持つ。
 
 -- ========== 旧モデルの撤去 ==========
+-- workers も含めて全て drop & recreate する（サンプルデータ投入ガードが
+-- workers の件数を見るため、workers を残したままだと旧データが残っている環境で
+-- ガードが誤って「投入済み」と判定し、シードがサイレントに skip されてしまう）。
 drop table if exists public.achievements cascade;
 drop table if exists public.assignments cascade;
 drop table if exists public.milestones cascade;
@@ -64,6 +71,7 @@ drop table if exists public.projects cascade;
 drop table if exists public.orders cascade;
 drop table if exists public.clients cascade;
 drop table if exists public.teams cascade;
+drop table if exists public.workers cascade;
 
 -- ========== コア層 ==========
 
@@ -294,7 +302,7 @@ begin
   insert into public.pj (parent_id, name, color, owner_worker_id, fiscal_year, budget_amount)
     values (c_b, '保守運用 受注', '#f59e0b', w3, yr, 12000000) returning id into o3;
 
-  -- 深さ2: サブ受注（再帰が効いていることの実例。o1 をさらに束ねる）
+  -- 深さ2: 中間ノード（受注でも葉でもない、再帰が効いていることの実例。o1 をさらに束ねる）
   insert into public.pj (parent_id, name, color) values (o1, 'フェーズ1', '#818cf8')
     returning id into sub1;
 
