@@ -1,14 +1,15 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { availableYears } from "@/lib/aggregate";
+import { availableYears } from "@/lib/aggregate/progress";
 
 export function YearSelector() {
   const year = useStore((s) => s.year);
   const setYear = useStore((s) => s.setYear);
-  const entries = useStore((s) => s.entries);
+  const taskEntries = useStore((s) => s.taskEntries);
+  const tasks = useStore((s) => s.tasks);
 
-  const years = availableYears(entries, year);
+  const years = availableYears(taskEntries, tasks, year);
   // 隣接年も選べるよう前後1年を足す
   const options = Array.from(new Set([...years, year - 1, year + 1])).sort(
     (a, b) => b - a
