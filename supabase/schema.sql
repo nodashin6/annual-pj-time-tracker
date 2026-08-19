@@ -3,7 +3,7 @@
 --
 -- ⚠️ 破壊的スクリプトです。このスクリプトを再実行すると、旧モデル・新モデルを問わず
 --   既存のテーブル（workers を含む）とそのデータは全て破棄され、空の状態から再作成されます。
---   既存データの移行は行いません。
+--   既存データの移行は行いません。このスクリプトは再実行安全（idempotent）です。
 --
 -- データモデル:
 --   コア層:   pj (再帰ツリー) ─ tracker (葉の印) ─ issues / tasks
@@ -14,10 +14,21 @@
 --   工数はコア層に存在しない。予定工数は task の期間から導出し、
 --   実績のみを task_entries に持つ。
 
--- ========== 旧モデルの撤去 ==========
+-- ========== 旧モデル・新モデルの撤去 ==========
 -- workers も含めて全て drop & recreate する（サンプルデータ投入ガードが
 -- workers の件数を見るため、workers を残したままだと旧データが残っている環境で
 -- ガードが誤って「投入済み」と判定し、シードがサイレントに skip されてしまう）。
+-- 新モデルの6テーブルも合わせて drop する。これを怠ると、2回目以降の実行で
+-- workers cascade が pj/pj_members/issues/tasks の FK 制約だけを道連れに破壊し、
+-- create table if not exists が no-op になるため FK が二度と再作成されない
+-- （旧バグ）。子 → 親の順（cascade があるので順序自体は必須ではないが、
+-- 依存関係を読み手に示すためにこの順にする）。
+drop table if exists public.task_entries cascade;
+drop table if exists public.tasks cascade;
+drop table if exists public.issues cascade;
+drop table if exists public.tracker cascade;
+drop table if exists public.pj_members cascade;
+drop table if exists public.pj cascade;
 drop table if exists public.achievements cascade;
 drop table if exists public.assignments cascade;
 drop table if exists public.milestones cascade;
@@ -29,6 +40,10 @@ drop table if exists public.teams cascade;
 drop table if exists public.workers cascade;
 
 -- ========== コア層 ==========
+-- 上ですべてのテーブルを無条件 drop しているため、以下の
+-- `create table if not exists` は本来常に新規作成になり `if not exists` は
+-- 冗長である。とはいえこのファイルを部分的に（drop 区間を除いて）適用する
+-- 読み手のために無害な形で残してある。
 
 -- ワーカー（作業者）。pj_members で pj へアサインする。
 create table if not exists public.workers (
@@ -195,6 +210,29 @@ drop trigger if exists issue_same_tracker_trg on public.issues;
 create trigger issue_same_tracker_trg
   before insert or update on public.issues
   for each row execute function public.issue_same_tracker();
+
+-- 4. task が issue にリンクする場合、その issue は同一 tracker 内に限定する。
+-- issue_same_tracker と同じ発想: issues.tracker_pj_id 側は同一ツリー内で
+-- 揃うが、tasks.issue_id は任意の issue を指せてしまうため、task 側にも
+-- 同じ制約を明示的にかける。
+create or replace function public.task_same_tracker() returns trigger as $$
+declare
+  linked_tracker uuid;
+begin
+  if new.issue_id is null then
+    return new;
+  end if;
+  select tracker_pj_id into linked_tracker from public.issues where id = new.issue_id;
+  if linked_tracker is distinct from new.tracker_pj_id then
+    raise exception 'task と紐づく issue は同一の tracker 内に限られます (id=%)', new.id;
+  end if;
+  return new;
+end $$ language plpgsql;
+
+drop trigger if exists task_same_tracker_trg on public.tasks;
+create trigger task_same_tracker_trg
+  before insert or update on public.tasks
+  for each row execute function public.task_same_tracker();
 
 -- ========== RLS ==========
 -- デモ用途のため anon による読み書きを許可します。
