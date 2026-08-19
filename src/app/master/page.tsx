@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { CARD, INPUT, DEL, BTN } from "@/lib/ui";
+import { notify } from "@/lib/notify";
 
 export default function MasterPage() {
   return (
@@ -24,8 +25,20 @@ export default function MasterPage() {
 }
 
 function WorkersSection() {
-  const { workers, addWorker, updateWorker, removeWorker } = useStore();
+  const { workers, tasks, addWorker, updateWorker, removeWorker } = useStore();
   const [name, setName] = useState("");
+
+  const removeWorkerSafely = (workerId: string, workerName: string) => {
+    const taskCount = tasks.filter((t) => t.assigneeId === workerId).length;
+    if (taskCount > 0) {
+      notify.error(
+        `「${workerName}」は task を${taskCount}件担当しているため削除できません。先に task の担当を変更するか削除してください。`
+      );
+      return;
+    }
+    if (!confirm(`「${workerName}」を削除します。よろしいですか？`)) return;
+    removeWorker(workerId);
+  };
 
   return (
     <section className={CARD}>
@@ -38,7 +51,10 @@ function WorkersSection() {
               onChange={(e) => updateWorker(w.id, { name: e.target.value })}
               className={`flex-1 ${INPUT}`}
             />
-            <button onClick={() => removeWorker(w.id)} className={DEL}>
+            <button
+              onClick={() => removeWorkerSafely(w.id, w.name)}
+              className={DEL}
+            >
               削除
             </button>
           </div>

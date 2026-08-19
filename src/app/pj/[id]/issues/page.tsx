@@ -6,8 +6,10 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { breadcrumb, isLeaf } from "@/lib/aggregate/tree";
 import type { Issue, Worker } from "@/lib/types";
-import { CARD, INPUT, LABEL, BTN, DEL } from "@/lib/ui";
+import { CARD, INPUT, LABEL, BTN, BTN_GHOST, DEL } from "@/lib/ui";
 import { Breadcrumb } from "@/app/pj/_components/Breadcrumb";
+
+type IssueEditPatch = { title: string; dueDate: string | undefined };
 
 function IssueRow({
   issue,
@@ -16,6 +18,7 @@ function IssueRow({
   workers,
   onToggleStatus,
   onAssigneeChange,
+  onEdit,
   onDelete,
 }: {
   issue: Issue;
@@ -24,10 +27,62 @@ function IssueRow({
   workers: Worker[];
   onToggleStatus: (issue: Issue) => void;
   onAssigneeChange: (issue: Issue, assigneeId: string) => void;
+  onEdit: (issue: Issue, patch: IssueEditPatch) => void;
   onDelete: (issue: Issue) => void;
 }) {
   const closed = issue.status === "closed";
   const children = childrenOfIssue(issue.id);
+
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(issue.title);
+  const [dueDate, setDueDate] = useState(issue.dueDate ?? "");
+
+  const cancel = () => {
+    setTitle(issue.title);
+    setDueDate(issue.dueDate ?? "");
+    setEditing(false);
+  };
+
+  const save = () => {
+    if (!title.trim()) return;
+    onEdit(issue, { title, dueDate: dueDate || undefined });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div
+        className="space-y-2 border-b border-slate-100 py-2 text-sm"
+        style={{ paddingLeft: depth * 20 }}
+      >
+        <div>
+          <label className={LABEL}>タイトル</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={`w-full ${INPUT}`}
+          />
+        </div>
+        <div>
+          <label className={LABEL}>期日</label>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className={`w-full ${INPUT}`}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={save} disabled={!title.trim()} className={BTN}>
+            保存
+          </button>
+          <button onClick={cancel} className={BTN_GHOST}>
+            キャンセル
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -67,6 +122,9 @@ function IssueRow({
         <span className="w-24 text-xs text-slate-400">
           {issue.dueDate ?? "期日なし"}
         </span>
+        <button onClick={() => setEditing(true)} className={BTN_GHOST}>
+          編集
+        </button>
         <button onClick={() => onDelete(issue)} className={DEL}>
           削除
         </button>
@@ -80,6 +138,7 @@ function IssueRow({
           workers={workers}
           onToggleStatus={onToggleStatus}
           onAssigneeChange={onAssigneeChange}
+          onEdit={onEdit}
           onDelete={onDelete}
         />
       ))}
@@ -229,6 +288,10 @@ export default function PjIssuesPage() {
     updateIssue(issue.id, { assigneeId: assigneeId || undefined });
   };
 
+  const editIssue = (issue: Issue, patch: IssueEditPatch) => {
+    updateIssue(issue.id, { title: patch.title, dueDate: patch.dueDate });
+  };
+
   const deleteIssue = (issue: Issue) => {
     if (
       !confirm(
@@ -288,6 +351,7 @@ export default function PjIssuesPage() {
                 workers={workers}
                 onToggleStatus={toggleStatus}
                 onAssigneeChange={changeAssignee}
+                onEdit={editIssue}
                 onDelete={deleteIssue}
               />
             ))}

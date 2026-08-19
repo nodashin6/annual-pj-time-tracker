@@ -443,7 +443,15 @@ export default function PjDetailPage() {
         <TrackerCard
           id={id}
           tracker={tracker}
-          onDetach={() => detachTracker(id)}
+          onDetach={() => {
+            if (
+              !confirm(
+                `「${pj.name}」から tracker を外します。配下の issue・task・入力済みの実績工数がすべて削除されます。よろしいですか？`
+              )
+            )
+              return;
+            detachTracker(id);
+          }}
           onChange={(patch) => updateTracker(id, patch)}
         />
       )}

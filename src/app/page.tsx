@@ -66,6 +66,10 @@ export default function DashboardPage() {
         <h3 className="mb-3 text-sm font-semibold text-slate-700">
           契約ノード別 工数（予定 / 実績 / 消化率）
         </h3>
+        <p className="mb-3 text-xs text-slate-400">
+          年度か予算を持つ pj
+          のサブツリーのみを対象とする内訳です。契約ノードを持たない木は上の合計には入りますが、この表には出ません。
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
