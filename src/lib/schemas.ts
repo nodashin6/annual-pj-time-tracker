@@ -21,18 +21,19 @@ const name = z
   .min(1, "名称を入力してください")
   .max(120, "名称は120文字以内で入力してください");
 
-/** 工数（時間）: 0 以上。 */
+/** 工数（時間）: 0 以上、上限は task_entries.hours の numeric(6,1) に合わせて 99999.9。 */
 const hours = z
   .number({ invalid_type_error: "数値を入力してください" })
   .finite("有効な数値を入力してください")
   .min(0, "工数は0以上で入力してください")
-  .max(100000, "工数が大きすぎます");
+  .max(99999.9, "工数が大きすぎます");
 
-/** 金額: 0 以上。 */
+/** 金額: 0 以上、上限は pj.budget_amount の numeric(14,2) に合わせて 999999999999.99。 */
 const amount = z
   .number({ invalid_type_error: "数値を入力してください" })
   .finite()
-  .min(0, "金額は0以上で入力してください");
+  .min(0, "金額は0以上で入力してください")
+  .max(999999999999.99, "金額が大きすぎます");
 
 /** 会計年度 / 実績の年。 */
 const year = z
@@ -89,7 +90,10 @@ export const trackerInputSchema = trackerInputBase.refine(
   (v) => !v.startDate || !v.endDate || v.startDate <= v.endDate,
   { message: TRACKER_ORDER_MESSAGE, path: ["endDate"] }
 );
-export const trackerPatchSchema = trackerInputBase.partial();
+// pjId は tracker の主キー（更新不可の識別子）なので patch には型として持たせない。
+export const trackerPatchSchema = trackerInputBase
+  .partial()
+  .omit({ pjId: true });
 
 // ---- issue（GitHub issue 相当） ----
 const issueInputBase = z.object({
@@ -101,7 +105,11 @@ const issueInputBase = z.object({
   status: z.enum(ISSUE_STATUSES).default("open"),
 });
 export const issueInputSchema = issueInputBase;
-export const issuePatchSchema = issueInputBase.partial();
+// trackerPjId は issue の所属 tracker（更新不可の識別子）なので patch には
+// 型として持たせない。updateIssue の DB write はこのキーを書かない。
+export const issuePatchSchema = issueInputBase
+  .partial()
+  .omit({ trackerPjId: true });
 
 /**
  * task の期間順序エラーメッセージ。
@@ -124,7 +132,11 @@ export const taskInputSchema = taskInputBase.refine(
   (v) => Date.parse(v.startAt) < Date.parse(v.endAt),
   { message: TASK_ORDER_MESSAGE, path: ["endAt"] }
 );
-export const taskPatchSchema = taskInputBase.partial();
+// trackerPjId は task の所属 tracker（更新不可の識別子）なので patch には
+// 型として持たせない。updateTask の DB write はこのキーを書かない。
+export const taskPatchSchema = taskInputBase
+  .partial()
+  .omit({ trackerPjId: true });
 
 // ---- 実績（拡張層） ----
 export const taskEntryInputSchema = z.object({

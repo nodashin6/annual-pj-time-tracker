@@ -17,13 +17,12 @@ import {
   pjPatchSchema,
   trackerInputSchema,
   trackerPatchSchema,
-  TRACKER_ORDER_MESSAGE,
   issueInputSchema,
   issuePatchSchema,
   taskInputSchema,
   taskPatchSchema,
-  TASK_ORDER_MESSAGE,
 } from "../schemas";
+import { mergeTrackerDates, mergeTaskDates } from "./validate";
 import type { PjInput, TrackerInput, IssueInput, TaskInput } from "../schemas";
 import {
   toWorker,
@@ -109,13 +108,14 @@ export const createCoreSlice: StateCreator<
   },
   updateWorker: async (id, patch) => {
     if (!supabase) return;
-    if (!check(workerInputSchema.partial(), patch)) return;
+    const v = check(workerInputSchema.partial(), patch);
+    if (!v) return;
     const prev = get().workers;
-    set({ workers: prev.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
+    set({ workers: prev.map((w) => (w.id === id ? { ...w, ...v } : w)) });
     try {
       const { error } = await supabase
         .from("workers")
-        .update(patchOf({ name: patch.name }))
+        .update(patchOf({ name: v.name }))
         .eq("id", id);
       if (error) throw error;
     } catch (e) {
@@ -175,10 +175,11 @@ export const createCoreSlice: StateCreator<
   },
   updatePj: async (id, patch) => {
     if (!supabase) return;
-    if (!check(pjPatchSchema, patch)) return;
+    const v = check(pjPatchSchema, patch);
+    if (!v) return;
     // color は NOT NULL でクリア不可のため空文字は「変更しない」として扱う。
     // ローカル・DB の両方で patch から color キーごと除いて解釈する。
-    const { color, ...rest } = patch;
+    const { color, ...rest } = v;
     const localPatch = color ? { ...rest, color } : rest;
     const prev = get().pjs;
     set({ pjs: prev.map((p) => (p.id === id ? { ...p, ...localPatch } : p)) });
@@ -187,20 +188,14 @@ export const createCoreSlice: StateCreator<
         .from("pj")
         .update(
           patchOf({
-            parent_id:
-              "parentId" in patch ? (patch.parentId ?? null) : undefined,
-            name: patch.name,
+            parent_id: "parentId" in v ? (v.parentId ?? null) : undefined,
+            name: v.name,
             color: color || undefined,
             owner_worker_id:
-              "ownerWorkerId" in patch
-                ? (patch.ownerWorkerId ?? null)
-                : undefined,
-            fiscal_year:
-              "fiscalYear" in patch ? (patch.fiscalYear ?? null) : undefined,
+              "ownerWorkerId" in v ? (v.ownerWorkerId ?? null) : undefined,
+            fiscal_year: "fiscalYear" in v ? (v.fiscalYear ?? null) : undefined,
             budget_amount:
-              "budgetAmount" in patch
-                ? (patch.budgetAmount ?? null)
-                : undefined,
+              "budgetAmount" in v ? (v.budgetAmount ?? null) : undefined,
           })
         )
         .eq("id", id);
@@ -298,30 +293,28 @@ export const createCoreSlice: StateCreator<
   },
   updateTracker: async (pjId, patch) => {
     if (!supabase) return;
-    if (!check(trackerPatchSchema, patch)) return;
+    const v = check(trackerPatchSchema, patch);
+    if (!v) return;
     // trackerPatchSchema は .partial() で startDate <= endDate の refine が
-    // 落ちているため、既存の tracker とマージした値で同じ検証をここで再現する。
-    // patch に無いキーは既存値を使う（"in" で判定。undefined は明示的なクリア）。
+    // 落ちているため、既存の tracker とマージした値で同じ検証を再現する
+    // （mergeTrackerDates。store/validate.ts、テストは validate.test.ts）。
     const current = get().trackers.find((t) => t.pjId === pjId);
-    const mergedStart =
-      "startDate" in patch ? patch.startDate : current?.startDate;
-    const mergedEnd = "endDate" in patch ? patch.endDate : current?.endDate;
-    if (mergedStart && mergedEnd && mergedStart > mergedEnd) {
-      notify.error(TRACKER_ORDER_MESSAGE);
+    const merged = mergeTrackerDates(current, v);
+    if (!merged.ok) {
+      notify.error(merged.message);
       return;
     }
     const prev = get().trackers;
     set({
-      trackers: prev.map((t) => (t.pjId === pjId ? { ...t, ...patch } : t)),
+      trackers: prev.map((t) => (t.pjId === pjId ? { ...t, ...v } : t)),
     });
     try {
       const { error } = await supabase
         .from("tracker")
         .update(
           patchOf({
-            start_date:
-              "startDate" in patch ? (patch.startDate ?? null) : undefined,
-            end_date: "endDate" in patch ? (patch.endDate ?? null) : undefined,
+            start_date: "startDate" in v ? (v.startDate ?? null) : undefined,
+            end_date: "endDate" in v ? (v.endDate ?? null) : undefined,
           })
         )
         .eq("pj_id", pjId);
@@ -384,21 +377,20 @@ export const createCoreSlice: StateCreator<
   },
   updateIssue: async (id, patch) => {
     if (!supabase) return;
-    if (!check(issuePatchSchema, patch)) return;
+    const v = check(issuePatchSchema, patch);
+    if (!v) return;
     const prev = get().issues;
-    set({ issues: prev.map((i) => (i.id === id ? { ...i, ...patch } : i)) });
+    set({ issues: prev.map((i) => (i.id === id ? { ...i, ...v } : i)) });
     try {
       const { error } = await supabase
         .from("issues")
         .update(
           patchOf({
-            parent_id:
-              "parentId" in patch ? (patch.parentId ?? null) : undefined,
-            assignee_id:
-              "assigneeId" in patch ? (patch.assigneeId ?? null) : undefined,
-            title: patch.title,
-            due_date: "dueDate" in patch ? (patch.dueDate ?? null) : undefined,
-            status: patch.status,
+            parent_id: "parentId" in v ? (v.parentId ?? null) : undefined,
+            assignee_id: "assigneeId" in v ? (v.assigneeId ?? null) : undefined,
+            title: v.title,
+            due_date: "dueDate" in v ? (v.dueDate ?? null) : undefined,
+            status: v.status,
           })
         )
         .eq("id", id);
@@ -463,34 +455,29 @@ export const createCoreSlice: StateCreator<
   },
   updateTask: async (id, patch) => {
     if (!supabase) return;
-    if (!check(taskPatchSchema, patch)) return;
+    const v = check(taskPatchSchema, patch);
+    if (!v) return;
     // taskPatchSchema は .partial() で startAt < endAt の refine が落ちている
-    // ため、既存の task とマージした値で同じ検証をここで再現する。
-    // startAt / endAt は必須列（クリア不可）なので、patch に無ければ ?? で
-    // 既存値にフォールバックする（"in" 判定は使わない）。
+    // ため、既存の task とマージした値で同じ検証を再現する
+    // （mergeTaskDates。store/validate.ts、テストは validate.test.ts）。
     const current = get().tasks.find((t) => t.id === id);
-    const mergedStart = patch.startAt ?? current?.startAt;
-    const mergedEnd = patch.endAt ?? current?.endAt;
-    if (
-      mergedStart &&
-      mergedEnd &&
-      !(Date.parse(mergedStart) < Date.parse(mergedEnd))
-    ) {
-      notify.error(TASK_ORDER_MESSAGE);
+    const merged = mergeTaskDates(current, v);
+    if (!merged.ok) {
+      notify.error(merged.message);
       return;
     }
     const prev = get().tasks;
-    set({ tasks: prev.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
+    set({ tasks: prev.map((t) => (t.id === id ? { ...t, ...v } : t)) });
     try {
       const { error } = await supabase
         .from("tasks")
         .update(
           patchOf({
-            issue_id: "issueId" in patch ? (patch.issueId ?? null) : undefined,
-            assignee_id: patch.assigneeId,
-            title: patch.title,
-            start_at: patch.startAt,
-            end_at: patch.endAt,
+            issue_id: "issueId" in v ? (v.issueId ?? null) : undefined,
+            assignee_id: v.assigneeId,
+            title: v.title,
+            start_at: v.startAt,
+            end_at: v.endAt,
           })
         )
         .eq("id", id);
